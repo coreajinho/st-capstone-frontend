@@ -1,15 +1,21 @@
 import { Link } from 'react-router-dom';
-import styles from './Navigator.module.css';
+import { Button } from '@/components/ui/button';
 
 function Navigator() {
   return (
-    <nav className={styles.navContainer}>
-      <Link to="/" className={styles.navLink}>
-        메인 페이지
-      </Link>
-      <Link to="/debate" className={styles.navLink}>
-        토론 페이지
-      </Link>
+    <nav className="border-b bg-gray-50 px-5 py-3">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" asChild>
+          <Link to="/">
+            메인 페이지
+          </Link>
+        </Button>
+        <Button variant="ghost" asChild>
+          <Link to="/debate">
+            토론 페이지
+          </Link>
+        </Button>
+      </div>
     </nav>
   );
 }
