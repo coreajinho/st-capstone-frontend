@@ -19,50 +19,74 @@ function SummonerPage() {
     const [matches, setMatches] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 현재 사용자가 본인 계정인지 확인 (추후 인증 시스템과 연동)
-    const [isOwnAccount] = useState(false); // TODO: 실제 인증 정보와 비교
+    // 검색된 소환사가 사이트에 가입된 user인지 확인
+    const [hasUserAccount, setHasUserAccount] = useState(false);
 
     // 데이터 로딩 함수
     const loadSummonerData = async () => {
         try {
             setIsLoading(true);
 
-            // 병렬로 데이터 로딩
-            const [summonerInfo, rankInfo, fairStatsInfo, reviewsInfo, matchesInfo] = await Promise.allSettled([
-                summonerApi.getSummonerInfo(decodedName),
-                summonerApi.getSummonerRank(decodedName),
+            // 1. 소환사 정보 검색 (닉네임#태그)
+            const summonerInfo = await summonerApi.searchSummoner(decodedName);
+            
+            // 소환사 기본 정보 설정
+            setSummonerData({
+                name: summonerInfo.nickname,
+                tagLine: summonerInfo.tagline,
+                puuid: summonerInfo.puuid,
+                profileIconId: null, // TODO: 백엔드에서 추가 필요
+                summonerLevel: null,  // TODO: 백엔드에서 추가 필요
+                lastUpdated: new Date().toISOString()
+            });
+
+            // 랭크 정보 설정 (SummonerSearchResponseDto에 포함됨)
+            setRankData({
+                solo: summonerInfo.soloTier ? {
+                    tier: summonerInfo.soloTier,
+                    rank: summonerInfo.soloDivision,
+                    leaguePoints: summonerInfo.soloPoints,
+                    wins: summonerInfo.soloWins,
+                    losses: summonerInfo.soloLoses
+                } : null,
+                flex: summonerInfo.flexTier ? {
+                    tier: summonerInfo.flexTier,
+                    rank: summonerInfo.flexDivision,
+                    leaguePoints: summonerInfo.flexPoints,
+                    wins: summonerInfo.flexWins,
+                    losses: summonerInfo.flexLoses
+                } : null
+            });
+
+            // 2. 병렬로 추가 데이터 로딩
+            const [matchesResult, fairStatsResult, reviewsResult] = await Promise.allSettled([
+                summonerApi.getRecentMatches(summonerInfo.puuid, 0, 10),
                 summonerApi.getFairStats(decodedName),
-                summonerApi.getSummonerReviews(decodedName),
-                summonerApi.getMatchHistory(decodedName)
+                summonerApi.getSummonerReviews(decodedName)
             ]);
 
-            // 각 결과 처리
-            if (summonerInfo.status === 'fulfilled') {
-                setSummonerData(summonerInfo.value);
+            // 매치 정보 처리
+            if (matchesResult.status === 'fulfilled') {
+                setMatches(matchesResult.value.matches || []);
             }
 
-            if (rankInfo.status === 'fulfilled') {
-                const ranks = rankInfo.value;
-                setRankData({
-                    solo: ranks.find(r => r.queueType === 'RANKED_SOLO_5x5') || null,
-                    flex: ranks.find(r => r.queueType === 'RANKED_FLEX_SR') || null
-                });
+            // Fair Stat 정보 처리
+            if (fairStatsResult.status === 'fulfilled' && fairStatsResult.value) {
+                setFairStats(fairStatsResult.value);
+                setHasUserAccount(true); // Fair Stat 정보가 있으면 가입된 사용자
+            } else {
+                setFairStats(null);
+                setHasUserAccount(false); // Fair Stat 정보가 없으면 미가입 사용자
             }
 
-            if (fairStatsInfo.status === 'fulfilled') {
-                setFairStats(fairStatsInfo.value);
-            }
-
-            if (reviewsInfo.status === 'fulfilled') {
-                setReviews(reviewsInfo.value.content || reviewsInfo.value);
-            }
-
-            if (matchesInfo.status === 'fulfilled') {
-                setMatches(matchesInfo.value.content || matchesInfo.value);
+            // 리뷰 정보 처리
+            if (reviewsResult.status === 'fulfilled') {
+                setReviews(reviewsResult.value.content || reviewsResult.value);
             }
 
         } catch (error) {
             console.error('소환사 데이터 로딩 실패:', error);
+            alert('소환사 정보를 불러오는데 실패했습니다. 닉네임#태그 형식을 확인해주세요.');
         } finally {
             setIsLoading(false);
         }
@@ -74,11 +98,9 @@ function SummonerPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [decodedName]);
 
-    // 전적 갱신 함수
+    // 전적 갱신 함수 (재검색으로 처리)
     const handleRefresh = async () => {
         try {
-            await summonerApi.refreshSummonerInfo(decodedName);
-            // 갱신 후 데이터 다시 로딩
             await loadSummonerData();
         } catch (error) {
             console.error('전적 갱신 실패:', error);
@@ -104,13 +126,11 @@ function SummonerPage() {
                     onRefresh={handleRefresh}
                 />
 
-                {/* 1-2. Fair Stat 영역 (본인 계정일 때만 표시) */}
-                {isOwnAccount && (
-                    <FairStatCard 
-                        fairStats={fairStats} 
-                        isOwnAccount={isOwnAccount}
-                    />
-                )}
+                {/* 1-2. Fair Stat 영역 (모든 방문자에게 표시) */}
+                <FairStatCard 
+                    fairStats={fairStats} 
+                    hasUserAccount={hasUserAccount}
+                />
 
                 {/* 1-3. 솔로랭크 영역 */}
                 <RankCard 
@@ -140,6 +160,7 @@ function SummonerPage() {
                     <MatchHistoryList 
                         matches={matches} 
                         isLoading={false}
+                        currentSummonerName={summonerData?.name || decodedName}
                     />
                 </div>
             </div>

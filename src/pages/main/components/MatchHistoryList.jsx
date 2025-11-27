@@ -7,24 +7,24 @@ const getResultBg = (win) => {
   return win ? "bg-blue-50 border-l-4 border-l-blue-500" : "bg-red-50 border-l-4 border-l-red-500";
 };
 
-// 게임 시간 포맷 (초 -> 분:초)
-const formatGameDuration = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}분 ${secs}초`;
-};
+// // 게임 시간 포맷 (초 -> 분:초)
+// const formatGameDuration = (seconds) => {
+//   const minutes = Math.floor(seconds / 60);
+//   const secs = seconds % 60;
+//   return `${minutes}분 ${secs}초`;
+// };
 
-// 시간 경과 표시
-const formatTimeAgo = (timestamp) => {
-  const now = new Date();
-  const gameDate = new Date(timestamp);
-  const diff = (now - gameDate) / 1000 / 60; // 분 단위
+// // 시간 경과 표시
+// const formatTimeAgo = (timestamp) => {
+//   const now = new Date();
+//   const gameDate = new Date(timestamp);
+//   const diff = (now - gameDate) / 1000 / 60; // 분 단위
 
-  if (diff < 60) return `${Math.floor(diff)}분 전`;
-  if (diff < 60 * 24) return `${Math.floor(diff / 60)}시간 전`;
-  if (diff < 60 * 24 * 7) return `${Math.floor(diff / 60 / 24)}일 전`;
-  return gameDate.toLocaleDateString('ko-KR');
-};
+//   if (diff < 60) return `${Math.floor(diff)}분 전`;
+//   if (diff < 60 * 24) return `${Math.floor(diff / 60)}시간 전`;
+//   if (diff < 60 * 24 * 7) return `${Math.floor(diff / 60 / 24)}일 전`;
+//   return gameDate.toLocaleDateString('ko-KR');
+// };
 
 // KDA 계산
 const calculateKDA = (kills, deaths, assists) => {
@@ -32,12 +32,51 @@ const calculateKDA = (kills, deaths, assists) => {
   return ((kills + assists) / deaths).toFixed(2);
 };
 
-// 개별 매치 카드 컴포넌트
-function MatchCard({ match }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { win, gameMode, gameDuration, timestamp, champion, position, kills, deaths, assists, items, spells, kda } = match;
+// 소환사 주문 ID -> 이미지 파일명 매핑 (주요 스펠만)
+const getSummonerSpellImage = (spellId) => {
+  const spellMap = {
+    1: 'SummonerBoost.png',      // 정화
+    3: 'SummonerExhaust.png',    // 탈진
+    4: 'SummonerFlash.png',      // 플래시
+    6: 'SummonerHaste.png',      // 유체화
+    7: 'SummonerHeal.png',       // 회복
+    11: 'SummonerSmite.png',     // 강타
+    12: 'SummonerTeleport.png',  // 순간이동
+    14: 'SummonerIgnite.png',    // 점화
+    21: 'SummonerBarrier.png',   // 방어막
+    32: 'SummonerSnowball.png',  // 마크/대시
+  };
+  return spellMap[spellId] || 'SummonerFlash.png';
+};
 
-  const kdaValue = kda || calculateKDA(kills, deaths, assists);
+// 개별 매치 카드 컴포넌트
+function MatchCard({ match, currentSummonerName }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // MatchDto에서 현재 소환사의 participant 정보 찾기
+  const participant = match.info?.participants?.find(
+    p => p.riotIdGameName === currentSummonerName || p.summonerName === currentSummonerName
+  );
+
+  if (!participant) {
+    return null; // 소환사 정보를 찾을 수 없으면 렌더링하지 않음
+  }
+
+  // participant 데이터에서 필요한 정보 추출
+  const { 
+    win, 
+    championName, 
+    teamPosition, 
+    kills, 
+    deaths, 
+    assists,
+    item0, item1, item2, item3, item4, item5, item6,
+    summoner1Id, summoner2Id,
+    totalMinionsKilled,
+    champLevel
+  } = participant;
+
+  const kdaValue = calculateKDA(kills, deaths, assists);
   const kdaColor = kdaValue === "Perfect" || parseFloat(kdaValue) >= 3 ? "text-green-600" : 
                    parseFloat(kdaValue) >= 2 ? "text-blue-600" : "text-gray-600";
 
@@ -50,40 +89,47 @@ function MatchCard({ match }) {
             <div className={`font-bold text-sm ${win ? "text-blue-600" : "text-red-600"}`}>
               {win ? "승리" : "패배"}
             </div>
-            <div className="text-xs text-gray-600 mt-1">{gameMode || "랭크"}</div>
+            <div className="text-xs text-gray-600 mt-1">랭크</div>
             <div className="text-xs text-gray-500 mt-1">
-              {formatTimeAgo(timestamp)}
+              최근 게임
             </div>
             <div className="text-xs text-gray-500">
-              {formatGameDuration(gameDuration)}
+              Lv.{champLevel}
             </div>
           </div>
 
           {/* 챔피언 아이콘 */}
           <div className="flex flex-col items-center gap-1">
             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-300 bg-gray-200">
-              {champion?.icon ? (
-                <img
-                  src={champion.icon}
-                  alt={champion.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl">
-                  ⚔️
-                </div>
-              )}
+              <img
+                src={`https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${championName}.png`}
+                alt={championName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = '';
+                  e.target.style.display = 'none';
+                }}
+              />
             </div>
             {/* 스펠 */}
-            {spells && spells.length === 2 && (
-              <div className="flex gap-0.5">
-                {spells.map((spell, idx) => (
-                  <div key={idx} className="w-5 h-5 bg-gray-300 rounded">
-                    {spell.icon && <img src={spell.icon} alt="" className="w-full h-full" />}
-                  </div>
-                ))}
+            <div className="flex gap-0.5">
+              <div className="w-5 h-5 bg-gray-300 rounded">
+                <img 
+                  src={`https://ddragon.leagueoflegends.com/cdn/14.1.1/img/spell/${getSummonerSpellImage(summoner1Id)}`}
+                  alt="spell1" 
+                  className="w-full h-full"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
               </div>
-            )}
+              <div className="w-5 h-5 bg-gray-300 rounded">
+                <img 
+                  src={`https://ddragon.leagueoflegends.com/cdn/14.1.1/img/spell/${getSummonerSpellImage(summoner2Id)}`}
+                  alt="spell2" 
+                  className="w-full h-full"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+              </div>
+            </div>
           </div>
 
           {/* KDA */}
@@ -94,22 +140,30 @@ function MatchCard({ match }) {
             <div className={`text-sm font-bold ${kdaColor}`}>
               {kdaValue} KDA
             </div>
-            {position && (
-              <div className="text-xs text-gray-600 mt-1">
-                포지션: {position}
+            <div className="text-xs text-gray-600 mt-1">
+              CS: {totalMinionsKilled}
+            </div>
+            {teamPosition && (
+              <div className="text-xs text-gray-600">
+                {teamPosition}
               </div>
             )}
           </div>
 
           {/* 아이템 */}
           <div className="grid grid-cols-4 gap-1">
-            {items && items.slice(0, 7).map((item, idx) => (
+            {[item0, item1, item2, item3, item4, item5, item6].map((itemId, idx) => (
               <div
                 key={idx}
                 className="w-8 h-8 bg-gray-200 rounded border border-gray-300"
               >
-                {item.icon ? (
-                  <img src={item.icon} alt="" className="w-full h-full rounded" />
+                {itemId > 0 ? (
+                  <img 
+                    src={`https://ddragon.leagueoflegends.com/cdn/14.1.1/img/item/${itemId}.png`}
+                    alt={`item${itemId}`}
+                    className="w-full h-full rounded"
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
                 ) : (
                   <div className="w-full h-full" />
                 )}
@@ -149,7 +203,7 @@ function MatchCard({ match }) {
   );
 }
 
-export function MatchHistoryList({ matches = [], isLoading = false }) {
+export function MatchHistoryList({ matches = [], isLoading = false, currentSummonerName = '' }) {
   if (isLoading) {
     return (
       <div className="text-center py-10 text-gray-500">
@@ -166,10 +220,21 @@ export function MatchHistoryList({ matches = [], isLoading = false }) {
     );
   }
 
-  // 승/패 통계
-  const wins = matches.filter(m => m.win).length;
-  const losses = matches.length - wins;
-  const winRate = matches.length > 0 ? ((wins / matches.length) * 100).toFixed(0) : 0;
+  // 승/패 통계 계산
+  let wins = 0;
+  let losses = 0;
+  matches.forEach(match => {
+    const participant = match.info?.participants?.find(
+      p => p.riotIdGameName === currentSummonerName || p.summonerName === currentSummonerName
+    );
+    if (participant) {
+      if (participant.win) wins++;
+      else losses++;
+    }
+  });
+  
+  const totalGames = wins + losses;
+  const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(0) : 0;
 
   return (
     <div className="space-y-4">
@@ -185,7 +250,11 @@ export function MatchHistoryList({ matches = [], isLoading = false }) {
       </div>
 
       {matches.map((match, index) => (
-        <MatchCard key={match.gameId || index} match={match} />
+        <MatchCard 
+          key={index} 
+          match={match} 
+          currentSummonerName={currentSummonerName}
+        />
       ))}
     </div>
   );

@@ -42,7 +42,9 @@ export function RankCard({ rankData, rankType = "SOLO" }) {
   const { tier, rank, leaguePoints, wins, losses } = rankData;
   const totalGames = wins + losses;
   const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : 0;
-  const tierColor = TIER_COLORS[tier] || "text-gray-600";
+  const tierColor = TIER_COLORS[tier?.toUpperCase()] || "text-gray-600";
+  const displayTier = tier?.toUpperCase() || "UNRANKED";
+  const displayRank = rank || "";
 
   return (
     <Card className="h-full">
@@ -53,8 +55,8 @@ export function RankCard({ rankData, rankType = "SOLO" }) {
           {/* 티어 이미지 */}
           <div className="w-20 h-20 flex-shrink-0">
             <img
-              src={getTierImage(tier)}
-              alt={`${tier} ${rank}`}
+              src={getTierImage(displayTier)}
+              alt={`${displayTier} ${displayRank}`}
               className="w-full h-full object-contain"
               onError={(e) => {
                 // 이미지 로드 실패 시 대체 텍스트
@@ -69,7 +71,7 @@ export function RankCard({ rankData, rankType = "SOLO" }) {
             {/* 티어 및 포인트 */}
             <div>
               <h4 className={`text-xl font-bold ${tierColor}`}>
-                {tier} {rank}
+                {displayTier} {displayRank}
               </h4>
               <p className="text-sm text-gray-600">
                 {leaguePoints} LP
