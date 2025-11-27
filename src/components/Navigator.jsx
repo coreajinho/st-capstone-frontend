@@ -26,6 +26,13 @@ function Navigator() {
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link to="/findTeam">
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                팀원 찾기
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
     </nav>
