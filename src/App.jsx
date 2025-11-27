@@ -7,7 +7,7 @@ function App() {
     <div>
       <Header />
       <Navigator />
-      <main className="container mx-auto p-12">
+      <main className="container mx-auto p-8">
         <Outlet />
       </main>
     </div>

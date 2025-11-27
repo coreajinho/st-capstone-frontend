@@ -6,7 +6,7 @@ export function Header() {
     <header className="bg-purple-500 ">
       <div className="flex items-center justify-between h-full px-12 py-2 mx-auto">
         {/* 로고 영역 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <img
             src={logo}
             alt="Fair.GG Logo"

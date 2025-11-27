@@ -1,21 +1,32 @@
+import { debateApi } from "@/apis/debateApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gavel, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function TrendingSection() {
-  const [activeTab, setActiveTab] = useState("views");
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("VIEWS");
+  const [trendingPosts, setTrendingPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const trendingPosts = [
-    { rank: 1, title: "페이커의 역대 최고 플레이 TOP 10", votes: 324, views: 5420 },
-    { rank: 2, title: "T1 vs GenG 결승전 하이라이트", votes: 298, views: 4890 },
-    { rank: 3, title: "챔피언 티어 순위 (최신판)", votes: 267, views: 3845 },
-    { rank: 4, title: "초보자가 꼭 알아야 할 10가지", votes: 245, views: 3521 },
-    { rank: 5, title: "롤드컵 우승 예측", votes: 223, views: 3210 },
-    { rank: 6, title: "정글러 캐리하는 법", votes: 198, views: 2876 },
-    { rank: 7, title: "신규 스킨 출시 소식", votes: 187, views: 2645 },
-    { rank: 8, title: "LCK 봄 시즌 전망", votes: 165, views: 2398 },
-  ];
+  // 인기 게시글 데이터 가져오기
+  useEffect(() => {
+    const fetchPopularPosts = async () => {
+      setIsLoading(true);
+      try {
+        const data = await debateApi.getPopularPosts(activeTab);
+        setTrendingPosts(data);
+      } catch (error) {
+        console.error('인기 게시글 조회 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPopularPosts();
+  }, [activeTab]);
 
   return (
     <Card>
@@ -30,16 +41,16 @@ export function TrendingSection() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setActiveTab("views")}
-            className={activeTab === "views" ? "bg-purple-100 text-purple-700 border-purple-300" : ""}
+            onClick={() => setActiveTab("VIEWS")}
+            className={activeTab === "VIEWS" ? "bg-purple-100 text-purple-700 border-purple-300" : ""}
           >
             조회수순
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setActiveTab("votes")}
-            className={activeTab === "votes" ? "bg-purple-100 text-purple-700 border-purple-300" : ""}
+            onClick={() => setActiveTab("COMMENTS")}
+            className={activeTab === "COMMENTS" ? "bg-purple-100 text-purple-700 border-purple-300" : ""}
           >
             <Gavel className="h-4 w-4 mr-1" />
             판결갯수순
@@ -48,15 +59,17 @@ export function TrendingSection() {
       </CardHeader>
 
       <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-8">
+            <p className="text-gray-500">로딩 중...</p>
+          </div>
+        ) : (
         <div className="space-y-3">
-          {trendingPosts
-            .sort((a, b) => 
-              activeTab === "views" ? b.views - a.views : b.votes - a.votes
-            )
-            .map((post, index) => (
+          {trendingPosts.map((post, index) => (
               <div
                 key={post.rank}
                 className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/debate/${post.id}`)}
               >
                 {/* 순위 */}
                 <div
@@ -77,12 +90,13 @@ export function TrendingSection() {
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>조회 {post.views.toLocaleString()}</span>
                     <span>·</span>
-                    <span>판결 {post.votes}</span>
+                    <span>판결 {post.commentCount || 0}</span>
                   </div>
                 </div>
               </div>
             ))}
         </div>
+        )}
       </CardContent>
     </Card>
   );

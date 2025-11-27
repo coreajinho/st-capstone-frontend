@@ -1,21 +1,33 @@
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 
 function Navigator() {
   return (
-    <nav className="border-b bg-gray-50 px-5 py-3">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" asChild>
-          <Link to="/">
-            메인 페이지
-          </Link>
-        </Button>
-        <Button variant="ghost" asChild>
-          <Link to="/debate">
-            토론 페이지
-          </Link>
-        </Button>
-      </div>
+    <nav className="border-b bg-purple-600 px-5 py-3">
+      <NavigationMenu>
+        <NavigationMenuList className="flex gap-4 px-12">
+          <NavigationMenuItem>
+            <Link to="/">
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                홈
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link to="/debate">
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                토론 게시판
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
     </nav>
   );
 }
