@@ -75,5 +75,16 @@ export const debateApi = {
   createComment: async (postId, commentData) => {
     const response = await api.post(`/api/debate/posts/${postId}/comments`, commentData);
     return response.data;
+  },
+
+  // 댓글 수정
+  updateComment: async (postId, commentId, commentData) => {
+    const response = await api.put(`/api/debate/posts/${postId}/comments/${commentId}`, commentData);
+    return response.data;
+  },
+
+  // 댓글 삭제
+  deleteComment: async (postId, commentId) => {
+    await api.delete(`/api/debate/posts/${postId}/comments/${commentId}`);
   }
 };

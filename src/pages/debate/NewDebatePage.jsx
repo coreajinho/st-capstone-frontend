@@ -22,6 +22,7 @@ export default function NewDebatePage() {
     content: "",
     writer: "",
     coWriter: "",
+    videoUrl: "",
     tags: []
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,6 +42,7 @@ export default function NewDebatePage() {
             content: postData.content,
             writer: postData.writer,
             coWriter: postData.coWriter || "",
+            videoUrl: postData.videoUrl || "",
             tags: postData.tags || []
           });
         } catch (error) {
@@ -169,6 +171,20 @@ export default function NewDebatePage() {
                 placeholder="공동 작성자 이름을 입력하세요"
                 value={formData.coWriter}
                 onChange={(e) => handleInputChange("coWriter", e.target.value)}
+              />
+            </FieldContent>
+          </Field>
+
+          {/* 비디오 URL */}
+          <Field>
+            <FieldLabel htmlFor="videoUrl">비디오 URL</FieldLabel>
+            <FieldContent>
+              <FieldDescription>YouTube 링크 등 비디오 URL을 입력하세요 (선택사항)</FieldDescription>
+              <Input
+                id="videoUrl"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={formData.videoUrl}
+                onChange={(e) => handleInputChange("videoUrl", e.target.value)}
               />
             </FieldContent>
           </Field>

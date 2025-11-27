@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, MessageSquare, Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // 페이지 이동 훅
 
@@ -21,12 +21,11 @@ export function DebateList({ selectedPositions = [] }) {
   const [searchType, setSearchType] = useState("TITLE"); // 검색 옵션
   const [searchKeyword, setSearchKeyword] = useState(""); // 검색 키워드
 
-  // 컴포넌트 마운트 시 데이터 Fetching
+  // 컴포넌트 마운트 시 데이터 Fetching(최초 한번만 실행)
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const data = await debateApi.getPosts();
-        // 백엔드 데이터 형식을 UI에 맞게 매핑 (필요시)
         setDebates(data);
       } catch (error) {
         console.error("게시글 목록 로딩 실패:", error);
@@ -67,18 +66,25 @@ export function DebateList({ selectedPositions = [] }) {
 
   // Enter 키 입력 처리
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
 
-  // 필터링 로직
-  const filteredDebates = selectedPositions.length === 0
-    ? debates
-    : debates.filter(debate => 
-        // 백엔드 태그 데이터와 포지션 필터 비교
-        debate.tags && selectedPositions.every(position => debate.tags.includes(position))
-      );
+  // 포지션 필터를 통한 필터링 로직
+  const filteredDebates =
+    selectedPositions.length === 0
+      // 아무 태그도 선택되지 않은 경우 모든 게시글 표시
+      ? debates
+      // 태그 선택시 해당 태그가 모두 포함된 게시글만 표시
+      : debates.filter(
+          (debate) =>
+            // 백엔드 태그 데이터와 포지션 필터 비교
+            debate.tags &&
+            selectedPositions.every((position) =>
+              debate.tags.includes(position)
+            )
+        );
 
   // 시간 포맷팅 헬퍼 함수
   const formatTime = (dateString) => {
@@ -86,9 +92,12 @@ export function DebateList({ selectedPositions = [] }) {
     const now = new Date();
     const diff = (now - date) / 1000 / 60; // 분 단위 차이
 
-    if (diff < 60) return `${Math.floor(diff)}분 전`;
-    if (diff < 60 * 24) return `${Math.floor(diff / 60)}시간 전`;
-    return date.toLocaleDateString();
+    if (diff < 60) return `${Math.floor(diff)}분 전`; // 1시간 이내
+    if (diff < 60 * 24) return `${Math.floor(diff / 60)}시간 전`; // 1일 이내
+    if (diff < 60 * 24 * 7) return `${Math.floor(diff / 60 / 24)}일 전`; // 1주 이내
+    if (diff < 60 * 24 * 30) return `${Math.floor(diff / 60 / 24 / 7)}주 전`; // 1달 이내
+    if (diff < 60 * 24 * 365) return `${Math.floor(diff / 60 / 24 / 30)}달 전`; // 1년 이내
+    return `${Math.floor(diff / 60 / 24 / 365)}년 전`; // 1년 이상
   };
 
   if (isLoading) {
@@ -114,23 +123,23 @@ export function DebateList({ selectedPositions = [] }) {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Input 
-              placeholder="검색" 
-              className="flex-1" 
+            <Input
+              placeholder="검색"
+              className="flex-1"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onKeyPress={handleKeyPress}
             />
-            <Button 
+            <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleSearch}
             >
               <Search className="h-4 w-4 mr-2" />
               검색
             </Button>
-            <Button 
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => navigate('/debate/new')}
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => navigate("/debate/new")}
             >
               새 토론
             </Button>
@@ -141,10 +150,11 @@ export function DebateList({ selectedPositions = [] }) {
       {/* 게시글 목록 */}
       {filteredDebates.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
-            등록된 토론이 없습니다.
+          등록된 토론이 없습니다.
         </div>
       ) : (
         filteredDebates.map((debate) => (
+          // 개별 게시글
           <Card
             key={debate.id}
             className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -152,41 +162,48 @@ export function DebateList({ selectedPositions = [] }) {
           >
             <CardContent className="pt-6">
               <div className="flex gap-4">
-                {/* 좌측: 투표수 (백엔드 리스트 API에 투표수가 없다면 임시로 아이콘만 표시하거나 0 처리) */}
+                {/* 좌측: 투표수 */}
                 <div className="flex flex-col items-center justify-center min-w-[60px]">
                   <div className="text-xl font-bold text-gray-400">
-                    - 
-                    {/* 현재 List API에는 voteCount가 없으므로 '-'로 표시. 
-                        필요하다면 백엔드 List DTO에 투표수 필드를 추가해야 함 */}
+                    {debate.commentCount || 0}
                   </div>
                   <div className="text-xs text-gray-500">투표</div>
                 </div>
 
                 {/* 중앙: 제목 및 정보 */}
                 <div className="flex-1 min-w-0">
+                  {/* 글 제목 */}
                   <h3 className="text-lg font-semibold mb-2 hover:text-purple-600 transition-colors">
                     {debate.title}
                   </h3>
-
                   <div className="flex items-center gap-4 text-sm text-gray-600">
-                    {/* 태그 표시 */}
-                    {debate.tags && debate.tags.length > 0 && (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">
-                            {debate.tags[0]}
-                        </span>
-                    )}
-                    
+                    {/* 작성자*/}
                     <span>{debate.writer}</span>
+                    {/* 작성 시간 */}
                     <span>{formatTime(debate.createdAt)}</span>
-                    
-                    <div className="flex items-center gap-1">
+                    {/* 댓글 수(현재 투표수로 통일 추후 변경 가능)*/}
+                    {/* <div className="flex items-center gap-1">
                       <MessageSquare className="h-4 w-4" />
-                      <span>{debate.comments ? debate.comments.length : 0}</span>
-                    </div>
+                      <span>{debate.commentCount}</span>
+                    </div> */}
+                    {/* 조회 수 */}
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
                       <span>{debate.views}</span>
                     </div>
+                    {/* 태그 표시 */}
+                    {debate.tags && debate.tags.length > 0 && (
+                      <div className="flex gap-1">
+                        {debate.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
