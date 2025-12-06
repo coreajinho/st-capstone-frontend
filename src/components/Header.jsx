@@ -1,7 +1,10 @@
+import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/images/simpleLogo.png";
 import { Button } from "./ui/button";
 
 export function Header() {
+  const location = useLocation();
+  
   return (
     <header className="bg-purple-500 ">
       <div className="flex items-center justify-between h-full px-12 py-2 mx-auto">
@@ -15,9 +18,11 @@ export function Header() {
         </div>
 
         {/* 로그인 버튼 */}
-        <Button variant="outline" className="h-10 px-6">
-          로그인
-        </Button>
+        <Link to="/auth/login" state={{ from: location.pathname }}>
+          <Button variant="outline" className="h-10 px-6">
+            로그인
+          </Button>
+        </Link>
       </div>
     </header>
   );

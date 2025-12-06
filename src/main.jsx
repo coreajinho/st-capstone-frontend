@@ -12,6 +12,8 @@ import NewTeamPostPage from './pages/findTeam/NewTeamPostPage.jsx'; // 팀원찾
 import TeamDetailPage from './pages/findTeam/TeamDetailPage.jsx'; // 팀원찾기 상세 페이지
 import MainPage from './pages/main/index.jsx';
 import SummonerPage from './pages/main/SummonerPage.jsx';
+import LoginPage from './pages/authentication/LoginPage.jsx';
+import SignupPage from './pages/authentication/SignupPage.jsx';
 
 const router = createBrowserRouter([
   {
@@ -58,6 +60,14 @@ const router = createBrowserRouter([
       {
         path: '/summoner/:summonerName',
         element: <SummonerPage />
+      },
+      {
+        path: '/auth/login',
+        element: <LoginPage />
+      },
+      {
+        path: '/auth/signup',
+        element: <SignupPage />
       }
     ]
   }
