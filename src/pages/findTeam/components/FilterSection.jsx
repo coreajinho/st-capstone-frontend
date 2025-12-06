@@ -16,7 +16,7 @@ export function FilterSection({ selectedPositions, onPositionsChange }) {
             type="multiple" 
             value={selectedPositions}
             onValueChange={onPositionsChange}
-            className="flex-col items-stretch gap-2"
+            className="flex flex-col items-stretch gap-2"
           >
             {positions.map((position) => (
               <ToggleGroupItem

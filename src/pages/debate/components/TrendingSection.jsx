@@ -31,7 +31,7 @@ export function TrendingSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex text-lg font-semibold items-center gap-2">
           <TrendingUp className="h-5 w-5 text-purple-600" />
           실시간 인기글
         </CardTitle>

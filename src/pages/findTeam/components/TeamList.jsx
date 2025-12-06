@@ -1,5 +1,4 @@
-// [TEMP_UI_TEST] 백엔드 구현 전 주석처리
-// eslint-disable-next-line no-unused-vars
+import { teamApi } from "@/apis/teamApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,113 +23,44 @@ export function TeamList({ selectedPositions = [] }) {
 
   // 데이터 Fetching
   useEffect(() => {
-    // [TEMP_UI_TEST] 백엔드 구현 전 UI 테스트용 주석처리 시작
-    // const fetchPosts = async () => {
-    //   try {
-    //     const data = await teamApi.getPosts();
-    //     setPosts(data);
-    //   } catch (error) {
-    //     console.error("게시글 목록 로딩 실패:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchPosts();
-    
-    // 더미 데이터
-    const dummyData = [
-      {
-        id: 1,
-        title: "다이아 탑 라이너 구합니다!",
-        content: "랭크 같이 올리실 분 구해요",
-        writer: "소환사1",
-        tags: ["TOP", "MID"],
-        acceptedTags: ["MID"],
-        requestCount: 5,
-        views: 120,
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-      },
-      {
-        id: 2,
-        title: "정글 + 서포터 급구!",
-        content: "클래시 팀 만들어요",
-        writer: "프로게이머지망생",
-        tags: ["JUG", "SUP"],
-        acceptedTags: ["JUG", "SUP"],
-        requestCount: 12,
-        views: 250,
-        status: "PENDING_EXPIRATION",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
-      },
-      {
-        id: 3,
-        title: "미드 원챔 환영",
-        content: "제드 르블랑 잘하시는 분",
-        writer: "미드갱금지",
-        tags: ["MID"],
-        acceptedTags: [],
-        requestCount: 3,
-        views: 89,
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString()
-      },
-      {
-        id: 4,
-        title: "올라인 구합니다",
-        content: "듀오 랭크 하실 분",
-        writer: "탑정글미드봇서폿",
-        tags: ["TOP", "JUG", "MID", "BOT", "SUP"],
-        acceptedTags: ["TOP", "JUG", "MID", "BOT", "SUP"],
-        requestCount: 20,
-        views: 500,
-        status: "EXPIRED",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString()
-      },
-      {
-        id: 5,
-        title: "봇 듀오 찾아요",
-        content: "골드~플레티넘",
-        writer: "AD캐리123",
-        tags: ["BOT", "SUP"],
-        acceptedTags: [],
-        requestCount: 7,
-        views: 156,
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString()
+    const fetchPosts = async () => {
+      try {
+        const data = await teamApi.getPosts();
+        setPosts(data);
+      } catch (error) {
+        console.error("게시글 목록 로딩 실패:", error);
+      } finally {
+        setIsLoading(false);
       }
-    ];
-    
-    setPosts(dummyData);
-    setIsLoading(false);
-    // [TEMP_UI_TEST] 백엔드 구현 전 UI 테스트용 주석처리 끝
+    };
+
+    fetchPosts();
   }, []);
 
   // 검색 기능
   const handleSearch = async () => {
-    // [TEMP_UI_TEST] 백엔드 구현 전 UI 테스트용 주석처리
-    alert('검색 기능은 백엔드 구현 후 사용 가능합니다.');
-    // if (!searchKeyword.trim()) {
-    //   setIsLoading(true);
-    //   try {
-    //     const data = await teamApi.getPosts();
-    //     setPosts(data);
-    //   } catch (error) {
-    //     console.error("게시글 목록 로딩 실패:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    //   return;
-    // }
-    // setIsLoading(true);
-    // try {
-    //   const data = await teamApi.searchPosts(searchType, searchKeyword);
-    //   setPosts(data);
-    // } catch (error) {
-    //   console.error("검색 실패:", error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    if (!searchKeyword.trim()) {
+      setIsLoading(true);
+      try {
+        const data = await teamApi.getPosts();
+        setPosts(data);
+      } catch (error) {
+        console.error("게시글 목록 로딩 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data = await teamApi.searchPosts(searchType, searchKeyword);
+      setPosts(data);
+    } catch (error) {
+      console.error("검색 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Enter 키 입력 처리
