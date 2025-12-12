@@ -1,6 +1,7 @@
-import { teamApi } from "@/apis/teamApi";
+import { findTeamApi } from "@/apis/findTeamApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthProvider";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +12,11 @@ import { useNavigate, useParams } from "react-router-dom";
 export default function NewTeamPostPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const isEditMode = !!id;
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [writer, setWriter] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,10 +26,9 @@ export default function NewTeamPostPage() {
     if (isEditMode) {
       const loadPost = async () => {
         try {
-          const post = await teamApi.getPost(id);
+          const post = await findTeamApi.getPost(id);
           setTitle(post.title);
           setContent(post.content);
-          setWriter(post.writer);
           setSelectedTags(post.tags || []);
         } catch (error) {
           console.error("게시글 로딩 실패:", error);
@@ -48,10 +48,6 @@ export default function NewTeamPostPage() {
       setError("내용을 입력해주세요.");
       return;
     }
-    if (!writer.trim()) {
-      setError("작성자를 입력해주세요.");
-      return;
-    }
     if (selectedTags.length === 0) {
       setError("모집 포지션을 하나 이상 선택해주세요.");
       return;
@@ -64,14 +60,14 @@ export default function NewTeamPostPage() {
       const postData = {
         title,
         content,
-        writer,
+        writerId: user?.id,
         tags: selectedTags,
       };
 
       if (isEditMode) {
-        await teamApi.updatePost(id, postData);
+        await findTeamApi.updatePost(id, postData);
       } else {
-        await teamApi.createPost(postData);
+        await findTeamApi.createPost(postData);
       }
 
       navigate("/findTeam");
@@ -122,16 +118,6 @@ export default function NewTeamPostPage() {
               placeholder="내용을 입력하세요"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              disabled={isLoading}
-            />
-          </Field>
-
-          <Field>
-            <Label>작성자</Label>
-            <Input
-              placeholder="작성자 이름을 입력하세요"
-              value={writer}
-              onChange={(e) => setWriter(e.target.value)}
               disabled={isLoading}
             />
           </Field>

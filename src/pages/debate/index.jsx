@@ -5,6 +5,22 @@ import { TrendingSection } from "./components/TrendingSection";
 
 function DebatePage() {
   const [selectedPositions, setSelectedPositions] = useState([]);
+  const [showMyPosts, setShowMyPosts] = useState(false);
+  const [showMyVotes, setShowMyVotes] = useState(false);
+
+  const handleShowMyPostsChange = () => {
+    setShowMyPosts(!showMyPosts);
+    if (!showMyPosts) {
+      setShowMyVotes(false); // 내 게시글 활성화시 내 투표 비활성화
+    }
+  };
+
+  const handleShowMyVotesChange = () => {
+    setShowMyVotes(!showMyVotes);
+    if (!showMyVotes) {
+      setShowMyPosts(false); // 내 투표 활성화시 내 게시글 비활성화
+    }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -16,11 +32,19 @@ function DebatePage() {
             <FilterSection 
               selectedPositions={selectedPositions}
               onPositionsChange={setSelectedPositions}
+              showMyPosts={showMyPosts}
+              onShowMyPostsChange={handleShowMyPostsChange}
+              showMyVotes={showMyVotes}
+              onShowMyVotesChange={handleShowMyVotesChange}
             />
           </div>
           
           {/* 가운데: 토론게시글 목록 */}
-          <DebateList selectedPositions={selectedPositions} />
+          <DebateList 
+            selectedPositions={selectedPositions}
+            showMyPosts={showMyPosts}
+            showMyVotes={showMyVotes}
+          />
           
           {/* 오른쪽: 실시간 인기글 (모바일에서는 숨김) */}
           <div className="hidden lg:block">

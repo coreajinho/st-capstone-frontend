@@ -11,6 +11,12 @@ export const debateApi = {
     return response.data;
   },
 
+  // 내 게시글 목록 조회
+  getMyPosts: async () => {
+    const response = await api.get('/api/debate/posts/my-posts');
+    return response.data;
+  },
+
   // 게시글 검색
   searchPosts: async (searchType, keyword) => {
     const response = await api.get('/api/debate/posts/search', {
@@ -86,5 +92,15 @@ export const debateApi = {
   // 댓글 삭제
   deleteComment: async (postId, commentId) => {
     await api.delete(`/api/debate/posts/${postId}/comments/${commentId}`);
+  },
+
+  // ---------------------------------------------------------------
+  // 내 투표 기능
+  // ---------------------------------------------------------------
+
+  // 내가 투표한 댓글 목록 조회
+  getMyVotes: async () => {
+    const response = await api.get('/api/debate/comments/my-votes');
+    return response.data;
   }
 };

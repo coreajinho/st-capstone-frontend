@@ -2,6 +2,7 @@ import { debateApi } from "@/apis/debateApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import VideoPlayer from "@/components/VideoPlayer";
+import { useAuth } from "@/contexts/AuthProvider";
 import { MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -9,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 function DebateDetailPage() {
   const { id } = useParams(); // URL에서 id 파라미터 추출
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // 상태 관리
   const [post, setPost] = useState(null);
@@ -19,13 +21,11 @@ function DebateDetailPage() {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [newComment, setNewComment] = useState({
     content: '',
-    writer: '',
     debateSide: 'PLAYER_1'
   });
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editComment, setEditComment] = useState({
     content: '',
-    writer: '',
     debateSide: 'PLAYER_1'
   });
 
@@ -70,7 +70,6 @@ function DebateDetailPage() {
     setEditingCommentId(comment.id);
     setEditComment({
       content: comment.content,
-      writer: comment.writer,
       debateSide: comment.debateSide
     });
   };
@@ -80,21 +79,21 @@ function DebateDetailPage() {
     setEditingCommentId(null);
     setEditComment({
       content: '',
-      writer: '',
       debateSide: 'PLAYER_1'
     });
   };
 
   // 댓글 수정 제출 핸들러
   const handleCommentEditSubmit = async (commentId) => {
-    if (!editComment.content.trim() || !editComment.writer.trim()) {
-      alert('내용과 작성자를 모두 입력해주세요.');
+    if (!editComment.content.trim()) {
+      alert('내용을 입력해주세요.');
       return;
     }
 
     try {
       await debateApi.updateComment(id, commentId, {
         ...editComment,
+        writerId: user?.id,
         debatePostId: Number(id)
       });
       
@@ -118,14 +117,15 @@ function DebateDetailPage() {
 
   // 댓글 작성 핸들러
   const handleCommentSubmit = async () => {
-    if (!newComment.content.trim() || !newComment.writer.trim()) {
-      alert('내용과 작성자를 모두 입력해주세요.');
+    if (!newComment.content.trim()) {
+      alert('내용을 입력해주세요.');
       return;
     }
 
     try {
       await debateApi.createComment(id, {
         ...newComment,
+        writerId: user?.id,
         debatePostId: Number(id)
       });
       
@@ -139,7 +139,7 @@ function DebateDetailPage() {
       setVoteResult(updatedVoteResult);
       
       // 폼 초기화 및 닫기
-      setNewComment({ content: '', writer: '', debateSide: 'PLAYER_1' });
+      setNewComment({ content: '', debateSide: 'PLAYER_1' });
       setShowCommentForm(false);
       alert('댓글이 작성되었습니다.');
     } catch (err) {
@@ -253,8 +253,12 @@ function DebateDetailPage() {
           {voteResult && (
             <div className="space-y-2">
               <div className="flex justify-between font-bold mb-2">
-                <span className="text-blue-600">PLAYER 1 ({voteResult.player1Percent.toFixed(1)}%)</span>
-                <span className="text-red-600">PLAYER 2 ({voteResult.player2Percent.toFixed(1)}%)</span>
+                <span className="text-blue-600">
+                  {post.writer} ({voteResult.player1Percent.toFixed(1)}%)
+                </span>
+                <span className="text-red-600">
+                  {post.coWriter || '상대방'} ({voteResult.player2Percent.toFixed(1)}%)
+                </span>
               </div>
               {/* 커스텀 프로그레스 바 */}
               <div className="h-6 w-full bg-gray-200 rounded-full overflow-hidden flex">
@@ -300,24 +304,14 @@ function DebateDetailPage() {
               <div className="p-4 border-2 border-purple-200 rounded-lg bg-purple-50">
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-semibold mb-1">작성자</label>
-                    <input
-                      type="text"
-                      value={newComment.writer}
-                      onChange={(e) => setNewComment({...newComment, writer: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="작성자 이름을 입력하세요"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm font-semibold mb-1">입장 선택</label>
                     <select
                       value={newComment.debateSide}
                       onChange={(e) => setNewComment({...newComment, debateSide: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
                     >
-                      <option value="PLAYER_1">PLAYER 1</option>
-                      <option value="PLAYER_2">PLAYER 2</option>
+                      <option value="PLAYER_1">{post.writer}</option>
+                      <option value="PLAYER_2">{post.coWriter || '상대방'}</option>
                     </select>
                   </div>
                   <div>
@@ -336,7 +330,7 @@ function DebateDetailPage() {
                       size="sm"
                       onClick={() => {
                         setShowCommentForm(false);
-                        setNewComment({ content: '', writer: '', debateSide: 'PLAYER_1' });
+                        setNewComment({ content: '', debateSide: 'PLAYER_1' });
                       }}
                     >
                       취소
@@ -362,24 +356,14 @@ function DebateDetailPage() {
                     // 수정 모드
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-semibold mb-1">작성자</label>
-                        <input
-                          type="text"
-                          value={editComment.writer}
-                          onChange={(e) => setEditComment({...editComment, writer: e.target.value})}
-                          className="w-full px-3 py-2 border rounded-md"
-                          placeholder="작성자 이름을 입력하세요"
-                        />
-                      </div>
-                      <div>
                         <label className="block text-sm font-semibold mb-1">입장 선택</label>
                         <select
                           value={editComment.debateSide}
                           onChange={(e) => setEditComment({...editComment, debateSide: e.target.value})}
                           className="w-full px-3 py-2 border rounded-md"
                         >
-                          <option value="PLAYER_1">PLAYER 1</option>
-                          <option value="PLAYER_2">PLAYER 2</option>
+                          <option value="PLAYER_1">{post.writer}</option>
+                          <option value="PLAYER_2">{post.coWriter || '상대방'}</option>
                         </select>
                       </div>
                       <div>
@@ -417,7 +401,7 @@ function DebateDetailPage() {
                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${
                           comment.debateSide === 'PLAYER_1' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
                         }`}>
-                          {comment.debateSide}
+                          {comment.debateSide === 'PLAYER_1' ? post.writer : (post.coWriter || '상대방')}
                         </span>
                       </div>
                       <p className="text-gray-700 text-sm">{comment.content}</p>

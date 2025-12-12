@@ -1,4 +1,5 @@
 import { summonerApi } from '@/apis/summonerApi';
+import { reviewApi } from '@/apis/reviewApi';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { FairStatCard } from './components/FairStatCard';
@@ -15,7 +16,8 @@ function SummonerPage() {
     const [summonerData, setSummonerData] = useState(null);
     const [rankData, setRankData] = useState({ solo: null, flex: null });
     const [fairStats, setFairStats] = useState(null);
-    const [reviews, setReviews] = useState([]);
+    const [reviewData, setReviewData] = useState(null); // statistics + reviews
+    const [currentReviewPage, setCurrentReviewPage] = useState(0);
     const [matches, setMatches] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -62,7 +64,7 @@ function SummonerPage() {
             const [matchesResult, fairStatsResult, reviewsResult] = await Promise.allSettled([
                 summonerApi.getRecentMatches(summonerInfo.puuid, 0, 10),
                 summonerApi.getFairStats(decodedName),
-                summonerApi.getSummonerReviews(decodedName)
+                reviewApi.getSummonerReviews(summonerInfo.nickname, summonerInfo.tagline, 0)
             ]);
 
             // 매치 정보 처리
@@ -81,7 +83,7 @@ function SummonerPage() {
 
             // 리뷰 정보 처리
             if (reviewsResult.status === 'fulfilled') {
-                setReviews(reviewsResult.value.content || reviewsResult.value);
+                setReviewData(reviewsResult.value);
             }
 
         } catch (error) {
@@ -146,17 +148,21 @@ function SummonerPage() {
             </div>
 
             {/* 하단 영역: 리뷰와 매치 히스토리 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 2. 하단 왼쪽: 리뷰 리스트 */}
-                <div>
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                {/* 2. 하단 왼쪽: 리뷰 리스트 (4/10) */}
+                <div className="lg:col-span-4">
                     <ReviewList 
-                        reviews={reviews} 
+                        reviewData={reviewData}
+                        currentPage={currentReviewPage}
+                        onPageChange={setCurrentReviewPage}
+                        summonerName={summonerData?.name}
+                        tagLine={summonerData?.tagLine}
                         isLoading={false}
                     />
                 </div>
 
-                {/* 3. 하단 오른쪽: 최근 게임 리스트 */}
-                <div>
+                {/* 3. 하단 오른쪽: 최근 게임 리스트 (6/10) */}
+                <div className="lg:col-span-6">
                     <MatchHistoryList 
                         matches={matches} 
                         isLoading={false}

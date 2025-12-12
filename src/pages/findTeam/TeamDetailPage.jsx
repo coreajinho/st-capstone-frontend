@@ -1,7 +1,8 @@
-import { teamApi } from "@/apis/teamApi";
+import { findTeamApi } from "@/apis/findTeamApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useAuth } from "@/contexts/AuthProvider";
 import { Check, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -9,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 export default function TeamDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [post, setPost] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -16,18 +18,18 @@ export default function TeamDetailPage() {
   const [error, setError] = useState("");
 
   const [newRequestContent, setNewRequestContent] = useState("");
-  const [selectedPosition, setSelectedPosition] = useState([]);
+  const [selectedPosition, setSelectedPosition] = useState("");
   const [editingRequestId, setEditingRequestId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
-  const [editingPosition, setEditingPosition] = useState([]);
+  const [editingPosition, setEditingPosition] = useState("");
 
   // 데이터 로딩
   useEffect(() => {
     const loadData = async () => {
       try {
         const [postData, requestsData] = await Promise.all([
-          teamApi.getPost(id),
-          teamApi.getRequests(id),
+          findTeamApi.getPost(id),
+          findTeamApi.getRequests(id),
         ]);
         setPost(postData);
         setRequests(requestsData);
@@ -48,20 +50,21 @@ export default function TeamDetailPage() {
       alert("요청 내용을 입력해주세요.");
       return;
     }
-    if (selectedPosition.length === 0) {
+    if (!selectedPosition) {
       alert("희망 포지션을 선택해주세요.");
       return;
     }
 
     try {
-      await teamApi.createRequest(id, {
+      await findTeamApi.createRequest(id, {
         content: newRequestContent,
-        position: selectedPosition[0],
+        desiredTag: selectedPosition,
+        writerId: user?.id,
       });
-      const updatedRequests = await teamApi.getRequests(id);
+      const updatedRequests = await findTeamApi.getRequests(id);
       setRequests(updatedRequests);
       setNewRequestContent("");
-      setSelectedPosition([]);
+      setSelectedPosition("");
     } catch (error) {
       console.error("요청 등록 실패:", error);
       alert("요청 등록에 실패했습니다.");
@@ -72,7 +75,7 @@ export default function TeamDetailPage() {
   const startEditRequest = (request) => {
     setEditingRequestId(request.id);
     setEditingContent(request.content);
-    setEditingPosition([request.position]);
+    setEditingPosition(request.desiredTag);
   };
 
   // 요청 수정 저장
@@ -81,21 +84,22 @@ export default function TeamDetailPage() {
       alert("요청 내용을 입력해주세요.");
       return;
     }
-    if (editingPosition.length === 0) {
+    if (!editingPosition) {
       alert("희망 포지션을 선택해주세요.");
       return;
     }
 
     try {
-      await teamApi.updateRequest(id, requestId, {
+      await findTeamApi.updateRequest(id, requestId, {
         content: editingContent,
-        position: editingPosition[0],
+        desiredTag: editingPosition,
+        writerId: user?.id,
       });
-      const updatedRequests = await teamApi.getRequests(id);
+      const updatedRequests = await findTeamApi.getRequests(id);
       setRequests(updatedRequests);
       setEditingRequestId(null);
       setEditingContent("");
-      setEditingPosition([]);
+      setEditingPosition("");
     } catch (error) {
       console.error("요청 수정 실패:", error);
       alert("요청 수정에 실패했습니다.");
@@ -107,8 +111,8 @@ export default function TeamDetailPage() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
 
     try {
-      await teamApi.deleteRequest(id, requestId);
-      const updatedRequests = await teamApi.getRequests(id);
+      await findTeamApi.deleteRequest(id, requestId);
+      const updatedRequests = await findTeamApi.getRequests(id);
       setRequests(updatedRequests);
     } catch (error) {
       console.error("요청 삭제 실패:", error);
@@ -119,10 +123,10 @@ export default function TeamDetailPage() {
   // 요청 수락
   const handleAcceptRequest = async (requestId) => {
     try {
-      await teamApi.acceptRequest(id, requestId);
+      await findTeamApi.toggleAcceptance(id, requestId);
       const [updatedPost, updatedRequests] = await Promise.all([
-        teamApi.getPost(id),
-        teamApi.getRequests(id),
+        findTeamApi.getPost(id),
+        findTeamApi.getRequests(id),
       ]);
       setPost(updatedPost);
       setRequests(updatedRequests);
@@ -132,12 +136,28 @@ export default function TeamDetailPage() {
     }
   };
 
+  // 요청 수락 취소
+  const handleCancelAcceptRequest = async (requestId) => {
+    try {
+      await findTeamApi.toggleAcceptance(id, requestId);
+      const [updatedPost, updatedRequests] = await Promise.all([
+        findTeamApi.getPost(id),
+        findTeamApi.getRequests(id),
+      ]);
+      setPost(updatedPost);
+      setRequests(updatedRequests);
+    } catch (error) {
+      console.error("요청 수락 취소 실패:", error);
+      alert("요청 수락 취소에 실패했습니다.");
+    }
+  };
+
   // 게시글 삭제
   const handleDeletePost = async () => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
 
     try {
-      await teamApi.deletePost(id);
+      await findTeamApi.deletePost(id);
       navigate("/findTeam");
     } catch (error) {
       console.error("게시글 삭제 실패:", error);
@@ -159,11 +179,11 @@ export default function TeamDetailPage() {
     return `${Math.floor(diff / 60 / 24 / 365)}년 전`;
   };
 
-  // 포지션별로 요청 필터링
+  // 포지션별로 요청 필터링 - acceptedTags는 Map 객체
   const getAvailablePositions = () => {
     if (!post) return [];
     return post.tags.filter(
-      (tag) => !post.acceptedTags || !post.acceptedTags.includes(tag)
+      (tag) => !post.acceptedTags || !post.acceptedTags[tag]
     );
   };
 
@@ -211,23 +231,31 @@ export default function TeamDetailPage() {
             <span>{post.writer}</span>
             <span>{formatTime(post.createdAt)}</span>
             <span>조회 {post.views}</span>
+            {post.status === "PENDING" && post.pendingExpirationAt && (
+              <span className="text-orange-600 font-medium">
+                매칭 예정: {new Date(post.pendingExpirationAt).toLocaleString('ko-KR')}
+              </span>
+            )}
           </div>
 
           <div className="mb-4">
             <div className="flex gap-2">
-              {post.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${
-                    post.acceptedTags && post.acceptedTags.includes(tag)
-                      ? "bg-gray-300 text-gray-600"
-                      : "bg-purple-100 text-purple-700"
-                  }`}
-                >
-                  {tag}
-                  {post.acceptedTags && post.acceptedTags.includes(tag) && " ✓"}
-                </span>
-              ))}
+              {post.tags.map((tag, index) => {
+                const isAccepted = post.acceptedTags && post.acceptedTags[tag];
+                return (
+                  <span
+                    key={index}
+                    className={`px-3 py-1 rounded-md text-sm font-medium ${
+                      isAccepted
+                        ? "bg-gray-300 text-gray-600"
+                        : "bg-purple-100 text-purple-700"
+                    }`}
+                  >
+                    {tag}
+                    {isAccepted && " ✓"}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
@@ -258,9 +286,7 @@ export default function TeamDetailPage() {
                 <ToggleGroup
                   type="single"
                   value={selectedPosition}
-                  onValueChange={(value) =>
-                    setSelectedPosition(value ? [value] : [])
-                  }
+                  onValueChange={(value) => setSelectedPosition(value || "")}
                   className="justify-start"
                 >
                   {availablePositions.map((position) => (
@@ -306,22 +332,22 @@ export default function TeamDetailPage() {
         ) : (
           <div className="space-y-4">
             {requests.map((request) => (
-              <Card key={request.id}>
+              <Card key={request.id} className={request.isAccepted ? "border-2 border-green-600 bg-green-50" : ""}>
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{request.writer}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base">{request.writer}</span>
                       <span
-                        className={`px-2 py-1 rounded-md text-xs font-medium ${
-                          request.accepted
+                        className={`px-4 py-1.5 rounded-full text-sm font-bold ${
+                          request.isAccepted
                             ? "bg-green-100 text-green-700"
-                            : "bg-blue-100 text-blue-700"
+                            : "bg-purple-100 text-purple-700"
                         }`}
                       >
-                        {request.position}
+                        {request.desiredTag}
                       </span>
-                      {request.accepted && (
-                        <span className="flex items-center gap-1 text-green-600 text-sm">
+                      {request.isAccepted && (
+                        <span className="flex items-center gap-1 text-green-600 text-sm font-medium">
                           <Check className="h-4 w-4" />
                           수락됨
                         </span>
@@ -331,7 +357,7 @@ export default function TeamDetailPage() {
                       <span className="text-sm text-gray-500">
                         {formatTime(request.createdAt)}
                       </span>
-                      {!request.accepted && (
+                      {!request.isAccepted ? (
                         <>
                           <Button
                             variant="outline"
@@ -355,6 +381,15 @@ export default function TeamDetailPage() {
                             수락
                           </Button>
                         </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-orange-600 hover:bg-orange-50"
+                          onClick={() => handleCancelAcceptRequest(request.id)}
+                        >
+                          수락 취소
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -368,9 +403,7 @@ export default function TeamDetailPage() {
                         <ToggleGroup
                           type="single"
                           value={editingPosition}
-                          onValueChange={(value) =>
-                            setEditingPosition(value ? [value] : [])
-                          }
+                          onValueChange={(value) => setEditingPosition(value || "")}
                           className="justify-start"
                         >
                           {availablePositions.map((position) => (
@@ -398,7 +431,7 @@ export default function TeamDetailPage() {
                           onClick={() => {
                             setEditingRequestId(null);
                             setEditingContent("");
-                            setEditingPosition([]);
+                            setEditingPosition("");
                           }}
                         >
                           취소

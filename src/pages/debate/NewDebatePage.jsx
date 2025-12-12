@@ -1,3 +1,4 @@
+import { authApi } from "@/apis/authApi";
 import { debateApi } from "@/apis/debateApi";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,24 +10,33 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useAuth } from "@/contexts/AuthProvider";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 export default function NewDebatePage() {
   const navigate = useNavigate();
   const { id } = useParams(); // For edit mode
+  const { user } = useAuth();
   const isEditMode = !!id;
   
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    writer: "",
-    coWriter: "",
     videoUrl: "",
     tags: []
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // CoWriter 관련 상태
+  const [enableCoWriter, setEnableCoWriter] = useState(false);
+  const [coWriterRiotName, setCoWriterRiotName] = useState("");
+  const [coWriterRiotTag, setCoWriterRiotTag] = useState("");
+  const [coWriterId, setCoWriterId] = useState(null);
+  const [coWriterDisplayName, setCoWriterDisplayName] = useState("");
+  const [isCoWriterValidated, setIsCoWriterValidated] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   const positions = ["TOP", "JUG","MID", "BOT", "SUP"];
 
@@ -40,11 +50,17 @@ export default function NewDebatePage() {
           setFormData({
             title: postData.title,
             content: postData.content,
-            writer: postData.writer,
-            coWriter: postData.coWriter || "",
             videoUrl: postData.videoUrl || "",
             tags: postData.tags || []
           });
+          
+          // 수정 모드에서 coWriter가 있으면 표시만 하고 변경 불가
+          if (postData.coWriter && postData.coWriterId) {
+            setEnableCoWriter(true);
+            setCoWriterDisplayName(postData.coWriter);
+            setCoWriterId(postData.coWriterId);
+            setIsCoWriterValidated(true);
+          }
         } catch (error) {
           console.error("게시글 로딩 실패:", error);
           alert("게시글을 불러오는데 실패했습니다.");
@@ -72,6 +88,45 @@ export default function NewDebatePage() {
     }));
   };
 
+  // CoWriter 검증 처리
+  const handleValidateCoWriter = async () => {
+    if (!coWriterRiotName.trim() || !coWriterRiotTag.trim()) {
+      alert("라이엇 닉네임과 태그를 모두 입력해주세요.");
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const result = await authApi.validateCoWriter(coWriterRiotName.trim(), coWriterRiotTag.trim());
+      
+      if (result.isValid) {
+        setCoWriterId(result.userId);
+        setCoWriterDisplayName(result.displayName);
+        setIsCoWriterValidated(true);
+        alert(`${result.displayName}님을 공동 작성자로 추가합니다.`);
+      } else {
+        alert("회원가입되지 않은 사용자입니다.");
+        setCoWriterId(null);
+        setCoWriterDisplayName("");
+        setIsCoWriterValidated(false);
+      }
+    } catch (error) {
+      console.error("CoWriter 검증 실패:", error);
+      alert("검증 중 오류가 발생했습니다.");
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // CoWriter 초기화
+  const handleResetCoWriter = () => {
+    setCoWriterRiotName("");
+    setCoWriterRiotTag("");
+    setCoWriterId(null);
+    setCoWriterDisplayName("");
+    setIsCoWriterValidated(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -84,19 +139,27 @@ export default function NewDebatePage() {
       alert("내용을 입력해주세요.");
       return;
     }
-    if (!formData.writer.trim()) {
-      alert("작성자를 입력해주세요.");
+
+    // CoWriter 검증 체크
+    if (enableCoWriter && !isCoWriterValidated) {
+      alert("공동 작성자를 검색하여 확인해주세요. 또는 체크를 해제하여 공동 작성자 없이 작성하세요.");
       return;
     }
+
+    const submitData = {
+      ...formData,
+      writerId: user?.id,
+      coWriterId: enableCoWriter && isCoWriterValidated ? coWriterId : undefined
+    };
 
     setIsSubmitting(true);
     try {
       if (isEditMode) {
-        await debateApi.updatePost(id, formData);
+        await debateApi.updatePost(id, submitData);
         alert("토론이 성공적으로 수정되었습니다!");
         navigate(`/debate/${id}`);
       } else {
-        await debateApi.createPost(formData);
+        await debateApi.createPost(submitData);
         alert("토론이 성공적으로 작성되었습니다!");
         navigate("/debate");
       }
@@ -147,31 +210,95 @@ export default function NewDebatePage() {
             </FieldContent>
           </Field>
 
-          {/* 작성자 */}
-          <Field>
-            <FieldLabel htmlFor="writer">작성자</FieldLabel>
-            <FieldContent>
-              <Input
-                id="writer"
-                placeholder="작성자 이름을 입력하세요"
-                value={formData.writer}
-                onChange={(e) => handleInputChange("writer", e.target.value)}
-                required
-              />
-            </FieldContent>
-          </Field>
-
           {/* 공동 작성자 */}
           <Field>
-            <FieldLabel htmlFor="coWriter">공동 작성자</FieldLabel>
+            <FieldLabel>공동 작성자</FieldLabel>
             <FieldContent>
               <FieldDescription>선택사항입니다</FieldDescription>
-              <Input
-                id="coWriter"
-                placeholder="공동 작성자 이름을 입력하세요"
-                value={formData.coWriter}
-                onChange={(e) => handleInputChange("coWriter", e.target.value)}
-              />
+              
+              {/* 체크박스 */}
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="enableCoWriter"
+                  checked={enableCoWriter}
+                  onChange={(e) => {
+                    setEnableCoWriter(e.target.checked);
+                    if (!e.target.checked) {
+                      handleResetCoWriter();
+                    }
+                  }}
+                  disabled={isEditMode && isCoWriterValidated}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="enableCoWriter" className="text-sm">
+                  공동 작성자 추가
+                </label>
+              </div>
+
+              {/* CoWriter 입력 영역 */}
+              {enableCoWriter && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  {!isCoWriterValidated ? (
+                    // 검증 전: 입력 폼
+                    <>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="라이엇 닉네임"
+                          value={coWriterRiotName}
+                          onChange={(e) => setCoWriterRiotName(e.target.value)}
+                          disabled={isValidating || isEditMode}
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="태그 (예: kr1)"
+                          value={coWriterRiotTag}
+                          onChange={(e) => setCoWriterRiotTag(e.target.value)}
+                          disabled={isValidating || isEditMode}
+                          className="w-32"
+                        />
+                        {!isEditMode && (
+                          <Button
+                            type="button"
+                            onClick={handleValidateCoWriter}
+                            disabled={isValidating || !coWriterRiotName.trim() || !coWriterRiotTag.trim()}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {isValidating ? "검색 중..." : "검색"}
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        공동 작성자를 추가하려면 검색 버튼을 클릭하세요.
+                      </p>
+                    </>
+                  ) : (
+                    // 검증 후: 확인 메시지
+                    <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600 text-xl">✓</span>
+                        <span className="font-medium">{coWriterDisplayName}</span>
+                        <span className="text-sm text-gray-600">님이 공동 작성자로 추가됩니다.</span>
+                      </div>
+                      {!isEditMode && (
+                        <button
+                          type="button"
+                          onClick={handleResetCoWriter}
+                          className="text-sm text-red-600 hover:underline"
+                        >
+                          취소
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {isEditMode && isCoWriterValidated && (
+                    <p className="text-sm text-gray-500">
+                      수정 모드에서는 공동 작성자를 변경할 수 없습니다.
+                    </p>
+                  )}
+                </div>
+              )}
             </FieldContent>
           </Field>
 

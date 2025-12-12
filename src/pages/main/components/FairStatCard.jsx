@@ -1,27 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star } from "lucide-react";
 
-// 별점 표시 컴포넌트
-function StarRating({ score, maxScore = 5 }) {
-  return (
-    <div className="flex gap-1">
-      {[...Array(maxScore)].map((_, index) => {
-        const fillPercent = Math.min(Math.max(score - index, 0), 1) * 100;
-        return (
-          <div key={index} className="relative w-5 h-5">
-            <Star className="w-5 h-5 text-gray-300 fill-gray-300" />
-            <div
-              className="absolute top-0 left-0 overflow-hidden"
-              style={{ width: `${fillPercent}%` }}
-            >
-              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// // 별점 표시 컴포넌트
+// function StarRating({ score, maxScore = 5 }) {
+//   return (
+//     <div className="flex gap-1">
+//       {[...Array(maxScore)].map((_, index) => {
+//         const fillPercent = Math.min(Math.max(score - index, 0), 1) * 100;
+//         return (
+//           <div key={index} className="relative w-5 h-5">
+//             <Star className="w-5 h-5 text-gray-300 fill-gray-300" />
+//             <div
+//               className="absolute top-0 left-0 overflow-hidden"
+//               style={{ width: `${fillPercent}%` }}
+//             >
+//               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+//             </div>
+//           </div>
+//         );
+//       })}
+//     </div>
+//   );
+// }
 
 export function FairStatCard({ fairStats, hasUserAccount = false }) {
   // fairStats가 없거나 user 계정이 없는 경우 (가입되지 않은 사용자)
@@ -63,11 +62,12 @@ export function FairStatCard({ fairStats, hasUserAccount = false }) {
               </div>
             </div>
 
-            {/* 리뷰 평균 스탯 */}
-            <div className="space-y-3">
+            리뷰 평균 스탯
+            {/* <div className="space-y-3">
               <h3 className="font-semibold text-gray-900">리뷰 평균 스탯</h3>
+
+
               <div className="space-y-3">
-                {/* 실력 */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700 w-16">실력</span>
                   <div className="flex-1 ml-3">
@@ -76,9 +76,9 @@ export function FairStatCard({ fairStats, hasUserAccount = false }) {
                   <span className="text-sm font-semibold text-gray-900 ml-2 w-8">
                     {(fairStats?.skillRating || 0).toFixed(1)}
                   </span>
-                </div>
 
-                {/* 협동 */}
+
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700 w-16">협동</span>
                   <div className="flex-1 ml-3">
@@ -89,7 +89,7 @@ export function FairStatCard({ fairStats, hasUserAccount = false }) {
                   </span>
                 </div>
 
-                {/* 멘탈 */}
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700 w-16">멘탈</span>
                   <div className="flex-1 ml-3">
@@ -100,7 +100,7 @@ export function FairStatCard({ fairStats, hasUserAccount = false }) {
                   </span>
                 </div>
 
-                {/* 매너 */}
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700 w-16">매너</span>
                   <div className="flex-1 ml-3">
@@ -112,13 +112,13 @@ export function FairStatCard({ fairStats, hasUserAccount = false }) {
                 </div>
               </div>
 
-              {/* 리뷰 개수 */}
-              <div className="text-center pt-2 border-t">
+
+              <div className="text-center pt-2 border-t-2 border-gray-300">
                 <span className="text-xs text-gray-500">
                   총 {fairStats?.totalReviews || 0}개의 리뷰
                 </span>
               </div>
-            </div>
+            </div>*/}
           </>
         )}
       </CardContent>

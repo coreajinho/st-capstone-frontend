@@ -14,36 +14,57 @@ import { Eye, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // 페이지 이동 훅
 
-export function DebateList({ selectedPositions = [] }) {
+export function DebateList({ selectedPositions = [], showMyPosts = false, showMyVotes = false }) {
   const navigate = useNavigate();
   const [debates, setDebates] = useState([]); // 게시글 데이터 상태
+  const [myVotes, setMyVotes] = useState([]); // 내 투표 댓글 데이터 상태
   const [isLoading, setIsLoading] = useState(true);
   const [searchType, setSearchType] = useState("TITLE"); // 검색 옵션
   const [searchKeyword, setSearchKeyword] = useState(""); // 검색 키워드
 
-  // 컴포넌트 마운트 시 데이터 Fetching(최초 한번만 실행)
+  // 컴포넌트 마운트 시 또는 필터 변경 시 데이터 Fetching
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const data = await debateApi.getPosts();
-        setDebates(data);
+        let data;
+        if (showMyVotes) {
+          // 내 투표 조회
+          data = await debateApi.getMyVotes();
+          setMyVotes(data);
+          setDebates([]); // 게시글 목록 초기화
+        } else if (showMyPosts) {
+          // 내 게시글 조회
+          data = await debateApi.getMyPosts();
+          setDebates(data);
+          setMyVotes([]); // 내 투표 목록 초기화
+        } else {
+          // 전체 게시글 조회
+          data = await debateApi.getPosts();
+          setDebates(data);
+          setMyVotes([]); // 내 투표 목록 초기화
+        }
       } catch (error) {
-        console.error("게시글 목록 로딩 실패:", error);
+        console.error("데이터 로딩 실패:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPosts();
-  }, []);
+  }, [showMyPosts, showMyVotes]);
 
   // 검색 기능
   const handleSearch = async () => {
+    // 내 투표 모드에서는 검색 비활성화
+    if (showMyVotes) return;
+
     if (!searchKeyword.trim()) {
       // 검색어가 비어있으면 전체 목록 다시 불러오기
       setIsLoading(true);
       try {
-        const data = await debateApi.getPosts();
+        const data = showMyPosts 
+          ? await debateApi.getMyPosts()
+          : await debateApi.getPosts();
         setDebates(data);
       } catch (error) {
         console.error("게시글 목록 로딩 실패:", error);
@@ -102,6 +123,69 @@ export function DebateList({ selectedPositions = [] }) {
 
   if (isLoading) {
     return <div className="text-center py-10">게시글을 불러오는 중...</div>;
+  }
+
+  // 내 투표 모드일 때 렌더링
+  if (showMyVotes) {
+    return (
+      <div className="space-y-4">
+        {/* 제목 */}
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-bold">내 투표</h2>
+          </CardContent>
+        </Card>
+
+        {/* 댓글 목록 */}
+        {myVotes.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            투표한 댓글이 없습니다.
+          </div>
+        ) : (
+          myVotes.map((vote) => (
+            <Card 
+              key={vote.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/debate/${vote.postId}`)}
+            >
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  {/* 게시글 제목 */}
+                  <h3 className="font-semibold text-lg text-purple-600 hover:text-purple-700">
+                    {vote.postTitle}
+                  </h3>
+                  
+                  {/* 매치업 정보 */}
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="font-medium">{vote.postWriter}</span>
+                    <span>vs</span>
+                    <span className="font-medium">{vote.postCoWriter || '상대방'}</span>
+                  </div>
+                  
+                  {/* 투표 진영 표시 */}
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      vote.debateSide === 'PLAYER_1' 
+                        ? 'bg-blue-100 text-blue-600' 
+                        : 'bg-red-100 text-red-600'
+                    }`}>
+                      {vote.debateSide === 'PLAYER_1' 
+                        ? vote.postWriter 
+                        : (vote.postCoWriter || '상대방')
+                      } 지지
+                    </span>
+                    <span className="text-sm text-gray-500">{formatTime(vote.createdAt)}</span>
+                  </div>
+                  
+                  {/* 댓글 내용 */}
+                  <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{vote.content}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    );
   }
 
   return (

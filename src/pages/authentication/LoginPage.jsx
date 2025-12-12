@@ -4,12 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { authApi } from '@/apis/authApi';
+import { useAuth } from '@/contexts/AuthProvider';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
+  const { login } = useAuth();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -34,8 +35,8 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await authApi.login(formData.username, formData.password);
-      console.log('로그인 성공:', response);
+      await login(formData.username, formData.password);
+      console.log('로그인 성공');
       alert('로그인 되었습니다!');
       navigate(from, { replace: true });
     } catch (error) {

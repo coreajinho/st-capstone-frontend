@@ -13,25 +13,25 @@ function Navigator() {
       <NavigationMenu>
         <NavigationMenuList className="flex gap-4 px-12">
           <NavigationMenuItem>
-            <Link to="/">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/">
                 홈
-              </NavigationMenuLink>
-            </Link>
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/debate">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/debate">
                 토론 게시판
-              </NavigationMenuLink>
-            </Link>
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/findTeam">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/findTeam">
                 팀원 찾기
-              </NavigationMenuLink>
-            </Link>
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
