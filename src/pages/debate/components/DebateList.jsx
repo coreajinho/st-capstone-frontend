@@ -1,4 +1,5 @@
 import { debateApi } from "@/apis/debateApi"; // API 임포트
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,10 +15,10 @@ import { Eye, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // 페이지 이동 훅
 
-export function DebateList({ selectedPositions = [], showMyPosts = false, showMyVotes = false }) {
+export function DebateList({ selectedPositions = [], showMyPosts = false, showMyVotes = false, statusFilter = null }) {
   const navigate = useNavigate();
   const [debates, setDebates] = useState([]); // 게시글 데이터 상태
-  const [myVotes, setMyVotes] = useState([]); // 내 투표 댓글 데이터 상태
+  const [myVotes, setMyVotes] = useState([]); // 내 투표 판결 데이터 상태
   const [isLoading, setIsLoading] = useState(true);
   const [searchType, setSearchType] = useState("TITLE"); // 검색 옵션
   const [searchKeyword, setSearchKeyword] = useState(""); // 검색 키워드
@@ -38,8 +39,8 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
           setDebates(data);
           setMyVotes([]); // 내 투표 목록 초기화
         } else {
-          // 전체 게시글 조회
-          data = await debateApi.getPosts();
+          // 전체 게시글 조회 (status filter 적용)
+          data = await debateApi.getPosts(statusFilter);
           setDebates(data);
           setMyVotes([]); // 내 투표 목록 초기화
         }
@@ -51,7 +52,7 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
     };
 
     fetchPosts();
-  }, [showMyPosts, showMyVotes]);
+  }, [showMyPosts, showMyVotes, statusFilter]);
 
   // 검색 기능
   const handleSearch = async () => {
@@ -64,7 +65,7 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
       try {
         const data = showMyPosts 
           ? await debateApi.getMyPosts()
-          : await debateApi.getPosts();
+          : await debateApi.getPosts(statusFilter);
         setDebates(data);
       } catch (error) {
         console.error("게시글 목록 로딩 실패:", error);
@@ -92,6 +93,41 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
     }
   };
 
+  // 상태별 배지 및 텍스트 반환
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'ACTIVE':
+        return { variant: 'active', text: '진행중' };
+      case 'PENDING':
+        return { variant: 'pending', text: '연장' };
+      case 'EXPIRED':
+        return { variant: 'expired', text: '종료' };
+      default:
+        return { variant: 'default', text: '진행중' };
+    }
+  };
+
+  // 남은 시간 계산
+  const getTimeRemaining = (expiresAt) => {
+    if (!expiresAt) return null;
+    
+    const now = new Date();
+    const expire = new Date(expiresAt);
+    const diff = expire - now;
+    
+    if (diff <= 0) return '만료됨';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}일 ${hours % 24}시간 남음`;
+    }
+    
+    return `${hours}시간 ${minutes}분 남음`;
+  };
+
   // 포지션 필터를 통한 필터링 로직
   const filteredDebates =
     selectedPositions.length === 0
@@ -106,6 +142,20 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
               debate.tags.includes(position)
             )
         );
+  
+  // 상태별 정렬: PENDING > ACTIVE > EXPIRED (같은 상태 내에서는 최신순)
+  const sortedDebates = [...filteredDebates].sort((a, b) => {
+    const statusOrder = { 'PENDING': 0, 'ACTIVE': 1, 'EXPIRED': 2 };
+    const aStatus = a.debateStatus || 'ACTIVE';
+    const bStatus = b.debateStatus || 'ACTIVE';
+    
+    if (statusOrder[aStatus] !== statusOrder[bStatus]) {
+      return statusOrder[aStatus] - statusOrder[bStatus];
+    }
+    
+    // 같은 상태라면 최신순
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
 
   // 시간 포맷팅 헬퍼 함수
   const formatTime = (dateString) => {
@@ -136,10 +186,10 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
           </CardContent>
         </Card>
 
-        {/* 댓글 목록 */}
+        {/* 판결 목록 */}
         {myVotes.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
-            투표한 댓글이 없습니다.
+            투표한 판결이 없습니다.
           </div>
         ) : (
           myVotes.map((vote) => (
@@ -177,7 +227,7 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
                     <span className="text-sm text-gray-500">{formatTime(vote.createdAt)}</span>
                   </div>
                   
-                  {/* 댓글 내용 */}
+                  {/* 판결 내용 */}
                   <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{vote.content}</p>
                 </div>
               </CardContent>
@@ -232,68 +282,90 @@ export function DebateList({ selectedPositions = [], showMyPosts = false, showMy
       </Card>
 
       {/* 게시글 목록 */}
-      {filteredDebates.length === 0 ? (
+      {sortedDebates.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
           등록된 토론이 없습니다.
         </div>
       ) : (
-        filteredDebates.map((debate) => (
-          // 개별 게시글
-          <Card
-            key={debate.id}
-            className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate(`/debate/${debate.id}`)} // [중요] 클릭 시 상세 페이지로 이동
-          >
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                {/* 좌측: 투표수 */}
-                <div className="flex flex-col items-center justify-center min-w-[60px]">
-                  <div className="text-xl font-bold text-gray-400">
-                    {debate.commentCount || 0}
-                  </div>
-                  <div className="text-xs text-gray-500">투표</div>
-                </div>
-
-                {/* 중앙: 제목 및 정보 */}
-                <div className="flex-1 min-w-0">
-                  {/* 글 제목 */}
-                  <h3 className="text-lg font-semibold mb-2 hover:text-purple-600 transition-colors">
-                    {debate.title}
-                  </h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    {/* 작성자*/}
-                    <span>{debate.writer}</span>
-                    {/* 작성 시간 */}
-                    <span>{formatTime(debate.createdAt)}</span>
-                    {/* 댓글 수(현재 투표수로 통일 추후 변경 가능)*/}
-                    {/* <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{debate.commentCount}</span>
-                    </div> */}
-                    {/* 조회 수 */}
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{debate.views}</span>
+        sortedDebates.map((debate) => {
+          const statusInfo = getStatusBadge(debate.debateStatus);
+          const timeRemaining = getTimeRemaining(debate.expiresAt);
+          
+          return (
+            // 개별 게시글
+            <Card
+              key={debate.id}
+              className={`hover:shadow-lg transition-shadow cursor-pointer ${
+                debate.debateStatus === 'EXPIRED' ? 'opacity-75' : ''
+              }`}
+              onClick={() => navigate(`/debate/${debate.id}`)} // [중요] 클릭 시 상세 페이지로 이동
+            >
+              <CardContent className="pt-6">
+                <div className="flex gap-4">
+                  {/* 좌측: 투표수 */}
+                  <div className="flex flex-col items-center justify-center min-w-[60px]">
+                    <div className="text-xl font-bold text-gray-400">
+                      {debate.commentCount || 0}
                     </div>
-                    {/* 태그 표시 */}
-                    {debate.tags && debate.tags.length > 0 && (
-                      <div className="flex gap-1">
-                        {debate.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                    <div className="text-xs text-gray-500">투표</div>
+                  </div>
+
+                  {/* 중앙: 제목 및 정보 */}
+                  <div className="flex-1 min-w-0">
+                    {/* 상태 배지 + 글 제목 */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={statusInfo.variant}>
+                        {statusInfo.text}
+                      </Badge>
+                      <h3 className="text-lg font-semibold hover:text-purple-600 transition-colors">
+                        {debate.title}
+                      </h3>
+                    </div>
+                    
+                    {/* 연장 정보 (연장전 상태일 때만 표시) */}
+                    {debate.debateStatus === 'PENDING' && debate.totalExtensionTimeHours > 0 && (
+                      <div className="mb-2 text-sm text-orange-600 font-medium">
+                        ⏰ 연장전 진행 중 (총 {debate.totalExtensionTimeHours}시간 연장됨)
                       </div>
                     )}
+                    
+                    {/* 남은 시간 */}
+                    {timeRemaining && debate.debateStatus !== 'EXPIRED' && (
+                      <div className="mb-2 text-sm text-gray-600">
+                        {timeRemaining}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      {/* 작성자*/}
+                      <span>{debate.writer}</span>
+                      {/* 작성 시간 */}
+                      <span>{formatTime(debate.createdAt)}</span>
+                      {/* 조회 수 */}
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        <span>{debate.views}</span>
+                      </div>
+                      {/* 태그 표시 */}
+                      {debate.tags && debate.tags.length > 0 && (
+                        <div className="flex gap-1">
+                          {debate.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+              </CardContent>
+            </Card>
+          );
+        })
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
     FieldLabel
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useEffect, useState } from "react";
@@ -24,7 +25,8 @@ export default function NewDebatePage() {
     title: "",
     content: "",
     videoUrl: "",
-    tags: []
+    tags: [],
+    debateDurationHours: 24
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,8 @@ export default function NewDebatePage() {
             title: postData.title,
             content: postData.content,
             videoUrl: postData.videoUrl || "",
-            tags: postData.tags || []
+            tags: postData.tags || [],
+            debateDurationHours: postData.debateDurationHours || 24
           });
           
           // 수정 모드에서 coWriter가 있으면 표시만 하고 변경 불가
@@ -313,6 +316,35 @@ export default function NewDebatePage() {
                 value={formData.videoUrl}
                 onChange={(e) => handleInputChange("videoUrl", e.target.value)}
               />
+            </FieldContent>
+          </Field>
+
+          {/* 토론 기간 선택 */}
+          <Field>
+            <FieldLabel htmlFor="debateDuration">토론 기간</FieldLabel>
+            <FieldContent>
+              <FieldDescription>토론이 진행될 시간을 선택하세요</FieldDescription>
+              <Select
+                value={formData.debateDurationHours.toString()}
+                onValueChange={(value) => handleInputChange("debateDurationHours", parseInt(value))}
+              >
+                <SelectTrigger className="w-full">
+                  {formData.debateDurationHours === 12 && "12시간"}
+                  {formData.debateDurationHours === 24 && "24시간 (1일)"}
+                  {formData.debateDurationHours === 48 && "48시간 (2일)"}
+                  {formData.debateDurationHours === 72 && "72시간 (3일)"}
+                  {formData.debateDurationHours === 168 && "168시간 (7일)"}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="12">12시간</SelectItem>
+                    <SelectItem value="24">24시간 (1일)</SelectItem>
+                    <SelectItem value="48">48시간 (2일)</SelectItem>
+                    <SelectItem value="72">72시간 (3일)</SelectItem>
+                    <SelectItem value="168">168시간 (7일)</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </FieldContent>
           </Field>
 

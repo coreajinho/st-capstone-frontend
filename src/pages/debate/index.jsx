@@ -7,6 +7,7 @@ function DebatePage() {
   const [selectedPositions, setSelectedPositions] = useState([]);
   const [showMyPosts, setShowMyPosts] = useState(false);
   const [showMyVotes, setShowMyVotes] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(null);
 
   const handleShowMyPostsChange = () => {
     setShowMyPosts(!showMyPosts);
@@ -36,6 +37,8 @@ function DebatePage() {
               onShowMyPostsChange={handleShowMyPostsChange}
               showMyVotes={showMyVotes}
               onShowMyVotesChange={handleShowMyVotesChange}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
             />
           </div>
           
@@ -44,6 +47,7 @@ function DebatePage() {
             selectedPositions={selectedPositions}
             showMyPosts={showMyPosts}
             showMyVotes={showMyVotes}
+            statusFilter={statusFilter}
           />
           
           {/* 오른쪽: 실시간 인기글 (모바일에서는 숨김) */}

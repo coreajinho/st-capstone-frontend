@@ -5,9 +5,11 @@ export const debateApi = {
   // 게시글 기능
   // ---------------------------------------------------------------
 
-  // 게시글 목록 조회
-  getPosts: async () => {
-    const response = await api.get('/api/debate/posts');
+  // 게시글 목록 조회 (상태별 필터링 지원)
+  getPosts: async (status) => {
+    const response = await api.get('/api/debate/posts', {
+      params: status ? { status } : {}
+    });
     return response.data;
   },
 
