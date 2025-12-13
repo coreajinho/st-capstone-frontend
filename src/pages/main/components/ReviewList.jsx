@@ -39,7 +39,8 @@ const formatTime = (dateString) => {
 
 export function ReviewList({ 
   summonerName, 
-  tagLine, 
+  tagLine,
+  hasUserAccount = false,
   isLoading: initialLoading = false 
 }) {
   const [reviewData, setReviewData] = useState(null);
@@ -48,9 +49,9 @@ export function ReviewList({
 
   // 리뷰 데이터 로딩
   useEffect(() => {
+    if (!summonerName || !tagLine) return;
+    
     const loadReviews = async () => {
-      if (!summonerName || !tagLine) return;
-      
       try {
         setIsLoading(true);
         const data = await reviewApi.getSummonerReviews(summonerName, tagLine, currentPage);
@@ -78,11 +79,37 @@ export function ReviewList({
     );
   }
 
+  // 회원이 아닌 경우
+  if (!hasUserAccount) {
+    return (
+      <Card className="bg-gray-50 opacity-60">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold text-purple-600">받은 리뷰</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-16">
+            <p className="text-gray-500 text-center">가입된 사용자가 아닙니다.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 회원이지만 리뷰가 없는 경우
   if (!reviewData || reviewData.totalReviews === 0) {
     return (
-      <div className="text-center py-10 text-gray-500">
-        아직 작성된 리뷰가 없습니다.
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-bold text-purple-600">받은 리뷰</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-10 text-gray-500">
+            <p className="mb-2">✍️</p>
+            <p className="text-sm">아직 작성된 리뷰가 없습니다.</p>
+            <p className="text-xs text-gray-400 mt-2">다른 유저들과 게임을 하고 첫 리뷰를 받아보세요!</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -101,27 +128,31 @@ export function ReviewList({
                 {statistics.overallAverage.toFixed(1)}
               </div>
               <div className="text-sm text-gray-600">
-                총 ({statistics.totalReviews}개의 리뷰)
+                총 {statistics.totalReviews}개의 리뷰
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-8 pr-4 border-r-2 border-gray-300">
-                <span className="text-sm font-medium text-gray-700">실력</span>
+              <div className="flex items-center gap-5 pr-4 border-r-2 border-gray-300">
+                <span className="text-sm font-medium text-gray-700 min-w-[40px]">실력</span>
                 <StarRating score={statistics.averageSkill} />
+                <span className="text-lg font-bold text-purple-600">{statistics.averageSkill.toFixed(1)}</span>
               </div>
-              <div className="flex items-center gap-8 pl-4">
-                <span className="text-sm font-medium text-gray-700">협동</span>
+              <div className="flex items-center gap-5 pl-4">
+                <span className="text-sm font-medium text-gray-700 min-w-[40px]">협동</span>
                 <StarRating score={statistics.averageCooperation} />
+                <span className="text-lg font-bold text-purple-600">{statistics.averageCooperation.toFixed(1)}</span>
               </div>
-              <div className="flex items-center gap-8 pr-4 border-r-2 border-gray-300">
-                <span className="text-sm font-medium text-gray-700">멘탈</span>
+              <div className="flex items-center gap-5 pr-4 border-r-2 border-gray-300">
+                <span className="text-sm font-medium text-gray-700 min-w-[40px]">멘탈</span>
                 <StarRating score={statistics.averageMental} />
+                <span className="text-lg font-bold text-purple-600">{statistics.averageMental.toFixed(1)}</span>
               </div>
-              <div className="flex items-center gap-8 pl-4">
-                <span className="text-sm font-medium text-gray-700">매너</span>
+              <div className="flex items-center gap-5 pl-4">
+                <span className="text-sm font-medium text-gray-700 min-w-[40px]">매너</span>
                 <StarRating score={statistics.averageManner} />
+                <span className="text-lg font-bold text-purple-600">{statistics.averageManner.toFixed(1)}</span>
               </div>
             </div>
           </CardContent>

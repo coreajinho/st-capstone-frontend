@@ -1,8 +1,8 @@
-import { summonerApi } from '@/apis/summonerApi';
 import { reviewApi } from '@/apis/reviewApi';
+import { summonerApi } from '@/apis/summonerApi';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FairStatCard } from './components/FairStatCard';
+import { DebateStatCard } from './components/DebateStatCard';
 import { MatchHistoryList } from './components/MatchHistoryList';
 import { ProfileCard } from './components/ProfileCard';
 import { RankCard } from './components/RankCard';
@@ -15,7 +15,7 @@ function SummonerPage() {
     // State 관리
     const [summonerData, setSummonerData] = useState(null);
     const [rankData, setRankData] = useState({ solo: null, flex: null });
-    const [fairStats, setFairStats] = useState(null);
+    const [debateStats, setDebateStats] = useState(null);
     const [reviewData, setReviewData] = useState(null); // statistics + reviews
     const [currentReviewPage, setCurrentReviewPage] = useState(0);
     const [matches, setMatches] = useState([]);
@@ -59,11 +59,17 @@ function SummonerPage() {
                     losses: summonerInfo.flexLoses
                 } : null
             });
-
+            // 토론 통계 정보 설정 (백엔드에서 제공)
+            setDebateStats({
+                debateWins: summonerInfo.debateWins || 0,
+                debateLosses: summonerInfo.debateLosses || 0,
+                debateDraws: summonerInfo.debateDraws || 0,
+                judgementSuccesses: summonerInfo.judgementSuccesses || 0,
+                judgementFailures: summonerInfo.judgementFailures || 0
+            });
             // 2. 병렬로 추가 데이터 로딩
-            const [matchesResult, fairStatsResult, reviewsResult] = await Promise.allSettled([
+            const [matchesResult, reviewsResult] = await Promise.allSettled([
                 summonerApi.getRecentMatches(summonerInfo.puuid, 0, 10),
-                summonerApi.getFairStats(decodedName),
                 reviewApi.getSummonerReviews(summonerInfo.nickname, summonerInfo.tagline, 0)
             ]);
 
@@ -72,14 +78,8 @@ function SummonerPage() {
                 setMatches(matchesResult.value.matches || []);
             }
 
-            // Fair Stat 정보 처리
-            if (fairStatsResult.status === 'fulfilled' && fairStatsResult.value) {
-                setFairStats(fairStatsResult.value);
-                setHasUserAccount(true); // Fair Stat 정보가 있으면 가입된 사용자
-            } else {
-                setFairStats(null);
-                setHasUserAccount(false); // Fair Stat 정보가 없으면 미가입 사용자
-            }
+            // User 계정 확인 (백엔드에서 제공하는 isRegisteredUser 사용)
+            setHasUserAccount(summonerInfo.isRegisteredUser || false);
 
             // 리뷰 정보 처리
             if (reviewsResult.status === 'fulfilled') {
@@ -128,9 +128,9 @@ function SummonerPage() {
                     onRefresh={handleRefresh}
                 />
 
-                {/* 1-2. Fair Stat 영역 (모든 방문자에게 표시) */}
-                <FairStatCard 
-                    fairStats={fairStats} 
+                {/* 1-2. Fair Stat 영역 (토론 통계 + 판결 이력) */}
+                <DebateStatCard 
+                    debateStats={debateStats}
                     hasUserAccount={hasUserAccount}
                 />
 
@@ -148,20 +148,21 @@ function SummonerPage() {
             </div>
 
             {/* 하단 영역: 리뷰와 매치 히스토리 */}
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-                {/* 2. 하단 왼쪽: 리뷰 리스트 (4/10) */}
-                <div className="lg:col-span-4">
+            <div className="grid grid-cols-1 lg:grid-cols-11 gap-6">
+                {/* 2. 하단 왼쪽: 리뷰 리스트 (5/11 = 45.45%) */}
+                <div className="lg:col-span-5">
                     <ReviewList 
                         reviewData={reviewData}
                         currentPage={currentReviewPage}
                         onPageChange={setCurrentReviewPage}
                         summonerName={summonerData?.name}
                         tagLine={summonerData?.tagLine}
+                        hasUserAccount={hasUserAccount}
                         isLoading={false}
                     />
                 </div>
 
-                {/* 3. 하단 오른쪽: 최근 게임 리스트 (6/10) */}
+                {/* 3. 하단 오른쪽: 최근 게임 리스트 (6/11 = 54.55%) */}
                 <div className="lg:col-span-6">
                     <MatchHistoryList 
                         matches={matches} 
