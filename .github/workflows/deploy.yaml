@@ -1,0 +1,48 @@
+name: Frontend CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # 1. Node.js 세팅
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    # 2. 패키지 설치 및 빌드 (환경변수 주입 중요!)
+    - name: Install & Build
+      run: |
+        npm install
+        npm run build
+      env:
+        # 깃허브 시크릿 값을 빌드 시점에 주입
+        VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+    # 3. 빌드 결과물(dist 폴더)을 서버로 전송
+    - name: Deploy to EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        source: "dist/*"
+        target: "/home/ubuntu/st-capstone-frontend"
+        strip_components: 0
+    
+    # 4. (선택사항) Nginx 재시작이 필요 없지만, 확실히 하기 위해 권한 재설정
+    - name: Fix Permissions
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          chmod 755 /home/ubuntu/st-capstone-frontend/dist
