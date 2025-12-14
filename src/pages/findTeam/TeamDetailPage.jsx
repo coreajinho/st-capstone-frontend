@@ -58,8 +58,9 @@ export default function TeamDetailPage() {
     try {
       await findTeamApi.createRequest(id, {
         content: newRequestContent,
-        desiredTag: selectedPosition,
+        writer: user?.username,
         writerId: user?.id,
+        desiredTag: selectedPosition,
       });
       const updatedRequests = await findTeamApi.getRequests(id);
       setRequests(updatedRequests);
@@ -92,8 +93,9 @@ export default function TeamDetailPage() {
     try {
       await findTeamApi.updateRequest(id, requestId, {
         content: editingContent,
-        desiredTag: editingPosition,
+        writer: user?.username,
         writerId: user?.id,
+        desiredTag: editingPosition,
       });
       const updatedRequests = await findTeamApi.getRequests(id);
       setRequests(updatedRequests);
@@ -214,17 +216,19 @@ export default function TeamDetailPage() {
         <CardContent className="pt-6">
           <div className="flex justify-between items-start mb-4">
             <h1 className="text-3xl font-bold">{post.title}</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/findTeam/${id}/edit`)}
-              >
-                수정
-              </Button>
-              <Button variant="destructive" onClick={handleDeletePost}>
-                삭제
-              </Button>
-            </div>
+            {(user?.id === post.writerId || user?.role === 'ADMIN') && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/findTeam/${id}/edit`)}
+                >
+                  수정
+                </Button>
+                <Button variant="destructive" onClick={handleDeletePost}>
+                  삭제
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
@@ -359,37 +363,45 @@ export default function TeamDetailPage() {
                       </span>
                       {!request.isAccepted ? (
                         <>
+                          {(user?.id === request.writerId || user?.role === 'ADMIN') && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditRequest(request)}
+                              >
+                                수정
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteRequest(request.id)}
+                              >
+                                삭제
+                              </Button>
+                            </>
+                          )}
+                          {(user?.id === post.writerId || user?.role === 'ADMIN') && (
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleAcceptRequest(request.id)}
+                            >
+                              수락
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        (user?.id === post.writerId || user?.role === 'ADMIN') && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => startEditRequest(request)}
+                            className="text-orange-600 hover:bg-orange-50"
+                            onClick={() => handleCancelAcceptRequest(request.id)}
                           >
-                            수정
+                            수락 취소
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteRequest(request.id)}
-                          >
-                            삭제
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleAcceptRequest(request.id)}
-                          >
-                            수락
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-orange-600 hover:bg-orange-50"
-                          onClick={() => handleCancelAcceptRequest(request.id)}
-                        >
-                          수락 취소
-                        </Button>
+                        )
                       )}
                     </div>
                   </div>

@@ -10,11 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatMatchType, formatTierRange, getMatchTypeIcon } from "@/lib/tierFormatter";
 import { Eye, MessageSquare, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function TeamList({ selectedPositions = [], showMyPosts = false }) {
+export function TeamList({ 
+  selectedPositions = [], 
+  showMyPosts = false, 
+  filteredPosts = null,
+  isFilterLoading = false
+}) {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +29,13 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
 
   // 데이터 Fetching
   useEffect(() => {
+    // filteredPosts가 있으면 필터링된 결과 사용
+    if (filteredPosts !== null) {
+      setPosts(filteredPosts);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchPosts = async () => {
       try {
         const data = showMyPosts
@@ -37,7 +50,7 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
     };
 
     fetchPosts();
-  }, [showMyPosts]);
+  }, [showMyPosts, filteredPosts]);
 
   // 검색버튼 클릭 처리
   const handleSearch = async () => {
@@ -77,7 +90,7 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
   };
 
   // 포지션 필터링 - 내 게시글 모드에서는 필터 무시
-  const filteredPosts = showMyPosts
+  const displayPosts = showMyPosts
     ? posts
     : selectedPositions.length === 0
     ? posts
@@ -127,7 +140,7 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
     return null;
   };
 
-  if (isLoading) {
+  if (isLoading || isFilterLoading) {
     return <div className="text-center py-10">게시글을 불러오는 중...</div>;
   }
 
@@ -177,20 +190,20 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
       )}
 
       {/* 게시글 목록 */}
-      {filteredPosts.length === 0 ? (
+      {displayPosts.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
           등록된 팀원 모집글이 없습니다.
         </div>
       ) : (
-        filteredPosts.map((post) => (
+        displayPosts.map((post) => (
           <Card
             key={post.id}
             className="hover:shadow-lg transition-shadow"
           >
             <CardContent className="pt-6">
               <div className="flex gap-4">
-                {/* 좌측: 요청 수 및 리뷰 작성 버튼 */}
-                <div className="flex flex-col items-center justify-center min-w-[60px] gap-2">
+                {/* 좌측: 요청 수 */}
+                <div className="flex flex-col items-center justify-center min-w-[60px]">
                   <div 
                     className="cursor-pointer"
                     onClick={() => navigate(`/findTeam/${post.id}`)}
@@ -200,22 +213,6 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
                     </div>
                     <div className="text-xs text-gray-500">요청</div>
                   </div>
-                  
-                  {/* 내 게시글이고 MATCHED 상태일 때만 리뷰 작성 버튼 표시 */}
-                  {showMyPosts && post.status === "MATCHED" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs px-2 py-1 h-auto border-purple-600 text-purple-600 hover:bg-purple-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/review/write?postId=${post.id}&mode=author`);
-                      }}
-                    >
-                      <MessageSquare className="h-3 w-3 mr-1" />
-                      리뷰 작성
-                    </Button>
-                  )}
                 </div>
 
                 {/* 중앙: 제목 및 정보 */}
@@ -229,6 +226,26 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
                     </h3>
                     {getStatusBadge(post)}
                   </div>
+
+                  {/* 티어 범위 및 매치 타입 표시 */}
+                  {post.minTier && post.maxTier && (
+                    <div className="flex items-center gap-2 mb-2">
+                      {post.matchType && (
+                        <span className="text-sm font-medium">
+                          {getMatchTypeIcon(post.matchType)} {formatMatchType(post.matchType)}
+                        </span>
+                      )}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md font-medium">
+                        {formatTierRange(post.minTier, post.maxTier)}
+                      </span>
+                      {post.requireMasterPlus && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-md font-medium">
+                          Master+ {post.masterPlusLpCap ? `(LP Cap: ${post.masterPlusLpCap})` : '(무제한)'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                     <span>{post.writer}</span>
                     <span>{formatTime(post.createdAt)}</span>
@@ -257,6 +274,24 @@ export function TeamList({ selectedPositions = [], showMyPosts = false }) {
                     )}
                   </div>
                 </div>
+
+                {/* 우측: 리뷰 작성 버튼 */}
+                {showMyPosts && post.status === "MATCHED" && (
+                  <div className="flex items-center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs px-3 py-2 h-auto border-purple-600 text-purple-600 hover:bg-purple-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/review/write?postId=${post.id}&mode=author`);
+                      }}
+                    >
+                      <MessageSquare className="h-3 w-3 mr-1" />
+                      리뷰 작성
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

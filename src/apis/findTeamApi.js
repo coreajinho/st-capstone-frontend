@@ -104,5 +104,37 @@ export const findTeamApi = {
   getMyPendingRequests: async () => {
     const response = await api.get('/api/find-team/requests/my-requests/pending');
     return response.data;
+  },
+
+  // ---------------------------------------------------------------
+  // 티어 관련 기능 (TierRange 기반)
+  // ---------------------------------------------------------------
+
+  // 작성자 티어 정보 조회 (WriterTierInfoResponse)
+  getWriterTierInfo: async (userId) => {
+    const response = await api.get(`/api/find-team/posts/writer-tier-info/${userId}`);
+    return response.data;
+  },
+
+  // 티어 범위로 게시글 필터링 (TierRange 기반)
+  fetchPostsByTierAndMatch: async (minTier, minDivision, minLp, maxTier, maxDivision, maxLp, matchType) => {
+    const params = {
+      minTier,
+      minDivision,
+      minLp: minLp || 0,
+      maxTier,
+      maxDivision,
+      maxLp: maxLp || 99,
+    };
+    
+    // 매치 타입이 있을 때와 없을 때 다른 엔드포인트 사용
+    if (matchType) {
+      params.matchType = matchType;
+      const response = await api.get('/api/find-team/posts/filter-by-tier-and-match', { params });
+      return response.data;
+    } else {
+      const response = await api.get('/api/find-team/posts/filter-by-tier', { params });
+      return response.data;
+    }
   }
 };

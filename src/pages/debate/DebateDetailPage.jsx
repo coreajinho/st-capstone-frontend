@@ -228,7 +228,7 @@ function DebateDetailPage() {
         <Button variant="ghost" onClick={() => navigate("/debate")}>
           ← 목록으로 돌아가기
         </Button>
-        {!isExpired && (
+        {!isExpired && (user?.id === post.writerId || user?.role === 'ADMIN') && (
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -486,24 +486,26 @@ function DebateDetailPage() {
                         <span className="text-xs text-gray-400">
                           {new Date(judgement.createdAt).toLocaleString()}
                         </span>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleJudgementEditStart(judgement)}
-                            className="text-purple-600 hover:bg-purple-50 h-7 px-2 text-xs"
-                          >
-                            수정
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleJudgementDelete(judgement.id)}
-                            className="text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
-                          >
-                            삭제
-                          </Button>
-                        </div>
+                        {(user?.id === judgement.writerId || user?.role === 'ADMIN') && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleJudgementEditStart(judgement)}
+                              className="text-purple-600 hover:bg-purple-50 h-7 px-2 text-xs"
+                            >
+                              수정
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleJudgementDelete(judgement.id)}
+                              className="text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+                            >
+                              삭제
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
